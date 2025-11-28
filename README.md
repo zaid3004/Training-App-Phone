@@ -1,50 +1,124 @@
-# Welcome to your Expo app 👋
+# PR Vault – Mobile Fitness Tracker (Expo + SQLite)
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+PR Vault is a fully offline-capable fitness tracking app built with **Expo**, **expo-router**, and **SQLite**.  
+It helps users log workouts, track bodyweight, maintain streaks, and visualize personal records — all with a clean, modern UI and customizable themes.
 
-## Get started
+---
 
-1. Install dependencies
+## ⭐ Key Features
 
-   ```bash
-   npm install
-   ```
+### **🏠 Home Dashboard**
+- Daily progress ring  
+- Streak counter  
+- PR summary (Bench, Squat, Deadlift)  
+- Recent weight logs  
+- Quick action buttons  
+- Mini bodyweight chart  
 
-2. Start the app
+---
 
-   ```bash
-   npx expo start
-   ```
+### **👤 Profile**
+- User details
+- Editable information (WIP)
+- Displays current theme + accent (automatic)
 
-In the output, you'll find options to open the app in a
+---
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+### **⚙️ Settings (Fully Functional + Persistent)**
+The settings system stores all user preferences in **SQLite**, per user.
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+#### **Appearance**
+- **Light / Dark theme**
+- **Accent colors**  
+  - Original (teal)  
+  - Dark blue  
+  - Baby pink  
+  - Blood red  
+  - Lime green  
+- Updates are **instant**, no confirmation required  
+- Settings persist across sessions using a per-user `user_settings` table
 
-## Get a fresh project
+#### **Notifications**
+- Toggle for app notifications (placeholder for now)
+- Saves instantly to SQLite
 
-When you're ready, run:
+#### **Account Management**
+- **Logout** (via AuthContext)
+- **Delete Account**  
+  - Deletes user, stats, logs, workouts, sets, settings  
+  - Logs out automatically  
+  - Redirects to Register
 
-```bash
-npm run reset-project
-```
+---
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+### **🧩 Authentication**
+Located in `app/auth/`:
+- `login.js`
+- `register.js`
 
-## Learn more
+App root (`app/index.js`) automatically:
+- Redirects unauthenticated users → `/auth/login`
+- Redirects logged-in users → `/ (tabs)/home`
 
-To learn more about developing your project with Expo, look at the following resources:
+---
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+### **📁 Directory Structure**
 
-## Join the community
+app
+├── (tabs)
+│ ├── _layout.js
+│ ├── home/
+│ ├── profile/
+│ ├── settings/
+│ └── workouts/
+├── auth/
+│ ├── login.js
+│ └── register.js
+├── _layout.js
+└── index.js
 
-Join our community of developers creating universal apps.
+yaml
+Copy code
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+---
+
+### **🗄 Database**
+Using a custom `SQLiteProvider`.
+
+Tables used:
+- `users`
+- `user_stats`
+- `bodyweight_logs`
+- `workouts`
+- `workout_sets`
+- `user_settings` ← stores theme/accent/notifications
+
+---
+
+## 📦 Tech Stack
+- **Expo**
+- **expo-router**
+- **React Native**
+- **SQLite (expo-sqlite)**
+- **Context API**
+- **Ionicons**
+- **Shared layout components (SafeAreaView, ScrollView)**
+
+---
+
+## 🚧 Roadmap
+- Splash animation with shrinking logo → login/register
+- Full global theme provider using React Context
+- Workout editing & detailed history
+- Advanced charts (PR progress, volume tracking)
+- Export data (optional future feature)
+
+---
+
+## 📝 Notes
+PR Vault is designed to be **fast**, **simple**, and **offline-first**.  
+All settings and logs persist locally without external servers.
+
+---
+
+Made by Zaid.

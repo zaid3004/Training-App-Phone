@@ -16,7 +16,7 @@ import { useRouter } from "expo-router";
 export default function Login() {
   const router = useRouter();
   const { login } = useAuth();
-  const { getFirstAsync } = useSQLite(); // ✅ FIXED NAME
+  const { getFirstAsync } = useSQLite(); // FIXED NAME
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -49,7 +49,12 @@ export default function Login() {
         return;
       }
 
-      login(user);
+      // 🧨 IMPORTANT FIX — store only id & username, guaranteed
+      login({
+        id: user.id,
+        username: user.username,
+      });
+
       router.replace("/(tabs)");
     } catch (e) {
       console.log("LOGIN ERROR:", e);
@@ -113,17 +118,17 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 32,
     fontWeight: "bold",
-    color: "#2F90EB",
+    color: "#fff",
     marginBottom: 40,
   },
   error: {
-    color: "#2F90EB",
+    color: "#fff",
     marginBottom: 15,
     fontSize: 14,
   },
   input: {
     backgroundColor: "#111",
-    borderColor: "#2F90EB",
+    borderColor: "#fff",
     borderWidth: 1,
     borderRadius: 10,
     padding: 14,
@@ -132,7 +137,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   loginBtn: {
-    backgroundColor: "#2F90EB",
+    backgroundColor: "#2EF0BA",
     paddingVertical: 14,
     borderRadius: 10,
     marginTop: 10,
@@ -144,7 +149,7 @@ const styles = StyleSheet.create({
     color: "#000",
   },
   switchText: {
-    color: "#2F90EB",
+    color: "#fff",
     fontSize: 15,
     textAlign: "center",
   },

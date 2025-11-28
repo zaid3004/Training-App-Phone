@@ -127,19 +127,19 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 32,
     fontWeight: "bold",
-    color: "#2F90EB",
+    color: "#FFF",
     marginBottom: 40,
   },
 
   error: {
-    color: "#2F90EB",
+    color: "#FFF",
     marginBottom: 15,
     fontSize: 14,
   },
 
   input: {
     backgroundColor: "#111",
-    borderColor: "#2F90EB",
+    borderColor: "#FFF",
     borderWidth: 1,
     borderRadius: 10,
     padding: 14,
@@ -149,7 +149,7 @@ const styles = StyleSheet.create({
   },
 
   registerBtn: {
-    backgroundColor: "#2F90EB",
+    backgroundColor: "#2EF0BA",
     paddingVertical: 14,
     borderRadius: 10,
     marginTop: 10,
@@ -163,7 +163,7 @@ const styles = StyleSheet.create({
   },
 
   switchText: {
-    color: "#2F90EB",
+    color: "#FFF",
     fontSize: 15,
     textAlign: "center",
   },
