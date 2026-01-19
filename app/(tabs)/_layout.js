@@ -5,7 +5,7 @@ import { useSettings } from '../../lib/settings-context';
 import { useMemo } from 'react';
 
 export default function TabLayout() {
-  const { colors } = useSettings();
+  const { colors, theme, accent } = useSettings();
 
   const screenOptions = useMemo(() => ({
     headerShown: false,
@@ -15,7 +15,7 @@ export default function TabLayout() {
   }), [colors]);
 
   return (
-    <Tabs screenOptions={screenOptions}>
+    <Tabs key={theme + accent} screenOptions={screenOptions}>
       <Tabs.Screen
         name="home/index"
         options={{
@@ -31,7 +31,7 @@ export default function TabLayout() {
           title: 'Workouts',
           headerShown: false,
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="barbell-outline" size={size} color={color} />
+            <Ionicons name="fitness-outline" size={size} color={color} />
           ),
         }}
       />
