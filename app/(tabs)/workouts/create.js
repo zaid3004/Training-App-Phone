@@ -17,6 +17,7 @@ import { useSQLite } from "../../../lib/sqlite-provider";
 import { useAuth } from "../../../lib/auth/auth-context";
 import ExercisePicker from "../../../components/ExercisePicker";
 import Header from "../../../components/Header";
+import { updatePRsAfterWorkout } from "../../../lib/prs-utils";
 
 export default function CreateWorkout() {
   const router = useRouter();
@@ -27,6 +28,8 @@ export default function CreateWorkout() {
   const [workoutName, setWorkoutName] = useState("");
   const [description, setDescription] = useState("");
   const [selectedExercise, setSelectedExercise] = useState(null);
+  const [setWeight, setSetWeight] = useState("");
+  const [setReps, setSetReps] = useState("");
   const [saving, setSaving] = useState(false);
 
   async function saveWorkout() {
@@ -55,6 +58,16 @@ export default function CreateWorkout() {
          VALUES ('${id}', '${user.id}', '${workoutName.replace(/'/g, "''")}','${description.replace(/'/g, "''")}','${exercisesJson}','${createdAt}')`
       );
 
+      // PR Sync after workout is saved (incremental)
+      const weightVal = Number(setWeight) || 0;
+      const repsVal = Number(setReps) || null;
+      const entries = [{ name: selectedExercise.name, weight: weightVal, reps: repsVal }];
+      try {
+        await updatePRsAfterWorkout(db, user.id, id, entries);
+      } catch (e) {
+        console.log('PR sync after workout failed', e);
+      }
+
       Alert.alert("Saved", "Workout created successfully", [ { text: "OK", onPress: () => router.back() } ]);
     } catch (e) {
       console.log("Save workout error:", e);
@@ -80,7 +93,8 @@ export default function CreateWorkout() {
 
           <Text style={[styles.label, { color: colors.text, marginTop: 12 }]}>Description</Text>
           <TextInput
-            style={[styles.input, { backgroundColor: colors.bg, borderColor: colors.border, color: colors.text }]}            value={description}
+            style={[styles.input, { backgroundColor: colors.bg, borderColor: colors.border, color: colors.text }]}
+            value={description}
             onChangeText={setDescription}
             placeholder="Optional description"
             placeholderTextColor={colors.muted}
@@ -92,6 +106,25 @@ export default function CreateWorkout() {
         <View style={[styles.card, { backgroundColor: colors.cardBg, borderColor: colors.border }]}>
           <Text style={[styles.label, { color: colors.text }]}>Exercise</Text>
           <ExercisePicker value={selectedExercise} onChange={setSelectedExercise} placeholder="Choose exercise" />
+        </View>
+
+        <View style={[styles.card, { backgroundColor: colors.cardBg, borderColor: colors.border }]}>
+          <Text style={[styles.label, { color: colors.text }]}>Set (weight in kg)</Text>
+          <TextInput
+            style={[styles.input, { backgroundColor: colors.bg, borderColor: colors.border, color: colors.text }]}
+            value={setWeight}
+            onChangeText={setSetWeight}
+            placeholder="Weight"
+            placeholderTextColor={colors.muted}
+            keyboardType="numeric"/>
+          <Text style={[styles.label, { color: colors.text }]}>Reps</Text>
+          <TextInput
+            style={[styles.input, { backgroundColor: colors.bg, borderColor: colors.border, color: colors.text }]}
+            value={setReps}
+            onChangeText={setSetReps}
+            placeholder="Reps"
+            placeholderTextColor={colors.muted}
+            keyboardType="numeric"/>
         </View>
 
         <TouchableOpacity style={[styles.saveBtn, { backgroundColor: colors.accent }]} onPress={saveWorkout} disabled={saving}>

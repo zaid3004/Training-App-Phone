@@ -1,13 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, FlatList, StyleSheet } from 'react-native';
-import { useSQLite } from '../../lib/sqlite-provider';
-import { computePRsForUser } from '../../lib/prs-utils';
-import Header from '../../components/Header';
-import { useSettings } from '../../lib/settings-context';
+import { useSQLite } from '../../../lib/sqlite-provider';
+import { computePRsForUser, updatePRsAfterWorkout } from '../../../lib/prs-utils';
+import Header from '../../../components/Header';
+import { useAuth } from '../../../lib/auth/auth-context';
+import { useSettings } from '../../../lib/settings-context';
 
 export default function PRsScreen() {
   const { db } = useSQLite();
   const { colors } = useSettings();
+  const { user } = useAuth();
   const [prs, setPrs] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -15,11 +17,11 @@ export default function PRsScreen() {
     let mounted = true;
     async function load() {
       if (!db) return;
-      const userId = 'placeholder-user';
+      const userId = user?.id || null;
       try {
-        const data = await computePRsForUser(db, userId);
-        if (mounted) {
-          setPrs(data);
+        if (userId) {
+          const data = await computePRsForUser(db, userId);
+          if (mounted) setPrs(data);
         }
       } catch (e) {
         console.error('Failed to load PRs', e);
@@ -29,7 +31,7 @@ export default function PRsScreen() {
     }
     load();
     return () => { mounted = false; };
-  }, [db]);
+  }, [db, user?.id]);
 
   const renderItem = ({ item }) => (
     <View style={styles.row}>
