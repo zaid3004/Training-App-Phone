@@ -1,4 +1,3 @@
-// app/(tabs)/home/index.js
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -24,9 +23,7 @@ export default function Home() {
   return (
     <ScrollView contentContainerStyle={styles.page} style={{ backgroundColor: colors?.bg }}>
       <View style={styles.header}>
-        <Text style={[styles.title, { color: colors?.text }]}>
-          PRVault
-        </Text>
+        <Text style={[styles.title, { color: colors?.text }]}>PRVault</Text>
         <TouchableOpacity onPress={() => router.push('/prs')} style={styles.link}>
           <Text style={{ color: colors?.accent }}>PRs</Text>
         </TouchableOpacity>
