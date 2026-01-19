@@ -1,15 +1,19 @@
+// app/index.js
 import { Redirect } from 'expo-router';
 import { useAuth } from '../lib/auth/auth-context';
+import { useSettings } from '../lib/settings-context';
 import { View, ActivityIndicator } from 'react-native';
 
 export default function Index() {
   const { user, loading } = useAuth();
+  const { colors } = useSettings();
 
-  // Show loading spinner while checking auth
+  // CRITICAL: Show loading spinner while checking auth
+  // This prevents "unmatched route" bugs
   if (loading) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#000' }}>
-        <ActivityIndicator size="large" color="#2EF0BA" />
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.bg }}>
+        <ActivityIndicator size="large" color={colors.accent} />
       </View>
     );
   }
