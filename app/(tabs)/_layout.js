@@ -1,7 +1,7 @@
 // app/(tabs)/_layout.js
-import { Tabs } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
-import { useSettings } from "../../lib/settings-context";
+import { Tabs } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { useSettings } from '../../lib/settings-context';
 
 export default function TabLayout() {
   const { colors } = useSettings();
@@ -18,7 +18,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="home/index"
         options={{
-          title: "Home",
+          title: 'Home',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="home" size={size} color={color} />
           ),
@@ -27,7 +27,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="workouts/index"
         options={{
-          title: "Workouts",
+          title: 'Workouts',
           headerShown: false,
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="barbell" size={size} color={color} />
@@ -37,7 +37,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="profile/index"
         options={{
-          title: "Profile",
+          title: 'Profile',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="person" size={size} color={color} />
           ),
@@ -46,7 +46,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="settings/index"
         options={{
-          title: "Settings",
+          title: 'Settings',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="settings" size={size} color={color} />
           ),
