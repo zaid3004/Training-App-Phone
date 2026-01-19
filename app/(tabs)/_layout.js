@@ -2,19 +2,20 @@
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSettings } from '../../lib/settings-context';
+import { useMemo } from 'react';
 
 export default function TabLayout() {
   const { colors } = useSettings();
 
+  const screenOptions = useMemo(() => ({
+    headerShown: false,
+    tabBarStyle: { backgroundColor: colors.cardBg, borderTopColor: colors.border },
+    tabBarActiveTintColor: colors.accent,
+    tabBarInactiveTintColor: colors.muted,
+  }), [colors]);
+
   return (
-    <Tabs
-      screenOptions={{
-        headerShown: false,
-        tabBarStyle: { backgroundColor: colors.cardBg, borderTopColor: colors.border },
-        tabBarActiveTintColor: colors.accent,
-        tabBarInactiveTintColor: colors.muted,
-      }}
-    >
+    <Tabs screenOptions={screenOptions}>
       <Tabs.Screen
         name="home/index"
         options={{
@@ -28,9 +29,9 @@ export default function TabLayout() {
         name="workouts/index"
         options={{
           title: 'Workouts',
-          headerShown: true,
+          headerShown: false,
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="barbell" size={size} color={color} />
+            <Ionicons name="barbell-outline" size={size} color={color} />
           ),
         }}
       />
@@ -38,7 +39,6 @@ export default function TabLayout() {
         name="profile/index"
         options={{
           title: 'Profile',
-          headerShown: true,
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="person" size={size} color={color} />
           ),
@@ -48,7 +48,6 @@ export default function TabLayout() {
         name="settings/index"
         options={{
           title: 'Settings',
-          headerShown: true,
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="settings" size={size} color={color} />
           ),
