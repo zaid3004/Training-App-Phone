@@ -1,17 +1,16 @@
 // app/index.js
-import { Redirect } from 'expo-router';
 import SplashAnimation from './SplashAnimation';
 import { useState } from 'react';
 import { View } from 'react-native';
+import { Redirect } from 'expo-router';
 import { useSettings } from '../lib/settings-context';
 import { useAuth } from '../lib/auth/auth-context';
 
 export default function Index() {
-  const { user, loading } = useAuth();
-  const { colors, loading: settingsLoading } = useSettings();
+  const { user } = useAuth();
+  const { colors } = useSettings();
   const [done, setDone] = useState(false);
 
-  // Phase 5 splash: show while booting, then redirect to proper route
   if (!done) {
     return <SplashAnimation onDone={() => setDone(true)} />;
   }

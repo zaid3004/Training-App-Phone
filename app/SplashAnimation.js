@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Image, Animated, Easing } from 'react-native';
+import { View, Text, Animated, Easing } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useSettings } from './lib/settings-context';
+import { useSettings } from '../lib/settings-context';
 
 export default function SplashAnimation({ onDone }) {
   const router = useRouter();
@@ -27,11 +27,9 @@ export default function SplashAnimation({ onDone }) {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center' }}>
-      <Animated.Image
-        source={require('./assets/logo.png')}
-        style={{ width: 120, height: 120, opacity, transform: [{ scale }, { translateY }] }}
-        resizeMode="contain"
-      />
+      <Animated.Text style={{ fontSize: 48, fontWeight: '700', color: colors.accent, opacity, transform: [{ scale }, { translateY }] }}>
+        PR Vault
+      </Animated.Text>
     </View>
   );
 }
