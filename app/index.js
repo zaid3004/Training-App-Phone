@@ -1,23 +1,21 @@
 // app/index.js
 import { Redirect } from 'expo-router';
-import { useAuth } from '../lib/auth/auth-context';
+import SplashAnimation from './SplashAnimation';
+import { useState } from 'react';
+import { View } from 'react-native';
 import { useSettings } from '../lib/settings-context';
-import { View, ActivityIndicator } from 'react-native';
+import { useAuth } from '../lib/auth/auth-context';
 
 export default function Index() {
   const { user, loading } = useAuth();
-  const { colors } = useSettings();
+  const { colors, loading: settingsLoading } = useSettings();
+  const [done, setDone] = useState(false);
 
-  // Block navigation until auth and settings are ready to avoid routing hazards
-  if (loading) {
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors?.bg }}>
-        <ActivityIndicator size="large" color={colors?.accent} />
-      </View>
-    );
+  // Phase 5 splash: show while booting, then redirect to proper route
+  if (!done) {
+    return <SplashAnimation onDone={() => setDone(true)} />;
   }
 
   if (!user) return <Redirect href="/auth/login" />;
-
   return <Redirect href="/(tabs)/home" />;
 }
