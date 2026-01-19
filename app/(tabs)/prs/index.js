@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, FlatList, StyleSheet } from 'react-native';
-import { useSQLite } from '../../../lib/sqlite-provider';
-import { computePRsForUser } from '../../../lib/prs-utils';
-
-// Simple PRs screen showing PRs per exercise.
-// Note: This phase uses a placeholder userId. Later wired to a proper auth context.
+import { useSQLite } from '../../lib/sqlite-provider';
+import { computePRsForUser } from '../../lib/prs-utils';
+import Header from '../../components/Header';
+import { useSettings } from '../../lib/settings-context';
 
 export default function PRsScreen() {
   const { db } = useSQLite();
+  const { colors } = useSettings();
   const [prs, setPrs] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -15,7 +15,6 @@ export default function PRsScreen() {
     let mounted = true;
     async function load() {
       if (!db) return;
-      // Replace with real user id once auth is wired
       const userId = 'placeholder-user';
       try {
         const data = await computePRsForUser(db, userId);
@@ -43,9 +42,9 @@ export default function PRsScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Personal Records</Text>
+      <Header title="PRs" showBack={true} />
       {loading ? (
-        <Text>Loading...</Text>
+        <Text style={styles.loading}>Loading…</Text>
       ) : (
         <FlatList
           data={prs}
@@ -59,12 +58,12 @@ export default function PRsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16 },
-  title: { fontSize: 20, fontWeight: '600', marginBottom: 8 },
+  container: { flex: 1, paddingTop: 8 },
+  loading: { textAlign: 'center', marginTop: 20 },
+  empty: { textAlign: 'center', color: '#666', marginTop: 20 },
   row: { flexDirection: 'row', paddingVertical: 8, borderBottomWidth: 1, borderColor: '#eee' },
-  exercise: { flex: 2, fontSize: 16 },
+  exercise: { flex: 2 },
   weight: { flex: 1, textAlign: 'center' },
   date: { flex: 2, textAlign: 'center' },
   reps: { flex: 1, textAlign: 'center' },
-  empty: { marginTop: 20, textAlign: 'center', color: '#666' },
 });
