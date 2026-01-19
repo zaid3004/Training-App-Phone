@@ -28,7 +28,7 @@ export default function TabLayout() {
         name="workouts/index"
         options={{
           title: 'Workouts',
-          headerShown: false,
+          headerShown: true,
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="barbell" size={size} color={color} />
           ),
@@ -38,6 +38,7 @@ export default function TabLayout() {
         name="profile/index"
         options={{
           title: 'Profile',
+          headerShown: true,
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="person" size={size} color={color} />
           ),
@@ -47,6 +48,7 @@ export default function TabLayout() {
         name="settings/index"
         options={{
           title: 'Settings',
+          headerShown: true,
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="settings" size={size} color={color} />
           ),

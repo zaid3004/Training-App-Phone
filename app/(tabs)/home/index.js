@@ -10,8 +10,8 @@ export default function Home() {
   const { user } = useAuth();
   const { colors } = useSettings();
 
+  // Simple placeholder home with bubbly styling; will be replaced with full phase 6+ home soon
   if (!user) {
-    // Simple loading state while auth resolves
     return (
       <ScrollView contentContainerStyle={styles.page} style={{ backgroundColor: colors?.bg }}>
         <View style={styles.center}>
@@ -24,13 +24,13 @@ export default function Home() {
   return (
     <ScrollView contentContainerStyle={styles.page} style={{ backgroundColor: colors?.bg }}>
       <Header title="Home" showBack={false} />
-      <View style={styles.card}>
+      <View style={[styles.card, { backgroundColor: colors?.cardBg, borderColor: colors?.border }]}>
         <Text style={{ color: colors?.text ?? '#000' }}>Welcome back, {user?.username ?? 'Athlete'}!</Text>
         <Text style={{ color: colors?.muted ?? '#666' }}>Your dashboard is under construction in this phase.</Text>
       </View>
 
-      <TouchableOpacity onPress={() => router.push('/workouts/create')} style={styles.cardBtn}>
-        <Text style={{ color: '#000' }}>Create Workout</Text>
+      <TouchableOpacity onPress={() => router.push('/workouts/create')} style={[styles.cardBtn, { backgroundColor: colors?.cardBg, borderColor: colors?.border }]}>
+        <Text style={{ color: colors?.text }}>Create Workout</Text>
       </TouchableOpacity>
     </ScrollView>
   );
@@ -42,6 +42,6 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 8 },
   title: { fontSize: 20, fontWeight: '700' },
   link: { padding: 6 },
-  card: { padding: 16, borderRadius: 8, borderWidth: 1, borderColor: '#ccc', marginTop: 8, backgroundColor: '#fff' },
-  cardBtn: { padding: 12, borderRadius: 8, alignItems: 'center', backgroundColor: '#eee', marginTop: 8 },
+  card: { padding: 16, borderRadius: 8, borderWidth: 1, marginTop: 8 },
+  cardBtn: { padding: 12, borderRadius: 8, alignItems: 'center', borderWidth: 1, marginTop: 8 },
 });

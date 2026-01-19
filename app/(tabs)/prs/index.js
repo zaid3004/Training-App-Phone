@@ -34,25 +34,25 @@ export default function PRsScreen() {
   }, [db, user?.id]);
 
   const renderItem = ({ item }) => (
-    <View style={styles.row}>
-      <Text style={styles.exercise}>{item.exercise}</Text>
-      <Text style={styles.weight}>{item.max_weight ?? '-'}</Text>
-      <Text style={styles.date}>{item.date ?? ''}</Text>
-      <Text style={styles.reps}>{item.reps != null ? item.reps : '-'}</Text>
+    <View style={[styles.row, { borderBottomColor: colors.border }]}>
+      <Text style={[styles.exercise, { color: colors.text }]}>{item.exercise}</Text>
+      <Text style={[styles.weight, { color: colors.text }]}>{item.max_weight ?? '-'}</Text>
+      <Text style={[styles.date, { color: colors.muted }]}>{item.date ?? ''}</Text>
+      <Text style={[styles.reps, { color: colors.text }]}>{item.reps != null ? item.reps : '-'}</Text>
     </View>
   );
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.bg }]}>
       <Header title="PRs" showBack={true} />
       {loading ? (
-        <Text style={styles.loading}>Loading…</Text>
+        <Text style={[styles.loading, { color: colors.text }]}>Loading…</Text>
       ) : (
         <FlatList
           data={prs}
           keyExtractor={(it) => it.exercise}
           renderItem={renderItem}
-          ListEmptyComponent={<Text style={styles.empty}>No PRs found yet.</Text>}
+          ListEmptyComponent={<Text style={[styles.empty, { color: colors.muted }]}>No PRs found yet.</Text>}
         />
       )}
     </View>
@@ -62,8 +62,8 @@ export default function PRsScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, paddingTop: 8 },
   loading: { textAlign: 'center', marginTop: 20 },
-  empty: { textAlign: 'center', color: '#666', marginTop: 20 },
-  row: { flexDirection: 'row', paddingVertical: 8, borderBottomWidth: 1, borderColor: '#eee' },
+  empty: { textAlign: 'center', marginTop: 20 },
+  row: { flexDirection: 'row', paddingVertical: 8, borderBottomWidth: 1 },
   exercise: { flex: 2 },
   weight: { flex: 1, textAlign: 'center' },
   date: { flex: 2, textAlign: 'center' },

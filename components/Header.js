@@ -8,7 +8,7 @@ export default function Header({ title, showBack = true, right }) {
   const { colors } = useSettings();
 
   return (
-    <View style={[styles.header, { backgroundColor: colors.bg }]}> 
+    <View style={[styles.header, { backgroundColor: colors.bg, borderBottomColor: colors.border }]}> 
       {showBack ? (
         <TouchableOpacity onPress={() => router.back()} style={styles.back}> 
           <Text style={{ color: colors.accent }}>Back</Text>

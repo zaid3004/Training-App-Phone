@@ -13,7 +13,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useSettings } from "../../../lib/settings-context";
 import { useSQLite } from "../../../lib/sqlite-provider";
 import { useAuth } from "../../../lib/auth/auth-context";
-import UserHeader from "../../../components/UserHeader";
+import Header from "../../../components/Header";
 
 export default function Workouts() {
   const router = useRouter();
@@ -115,7 +115,7 @@ export default function Workouts() {
           )}
         </View>
 
-        <View style={styles.workoutFooter}>
+        <View style={[styles.workoutFooter, { borderTopColor: colors.border }]}>
           <Text style={[styles.exerciseCount, { color: colors.muted }]}>
             {exercises.length} exercise{exercises.length !== 1 ? "s" : ""}
           </Text>
@@ -127,7 +127,7 @@ export default function Workouts() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]}>
-      <UserHeader title="Workouts" showSettings={false} />
+      <Header title="Workouts" showBack={false} />
       <View style={styles.header}>
         <Text style={[styles.subtitle, { color: colors.muted }]}>
           Plan, log, and track your sessions
@@ -141,7 +141,7 @@ export default function Workouts() {
           activeOpacity={0.8}
         >
           <Ionicons name="add-outline" size={22} color="#000" />
-          <Text style={styles.createText}>Create Workout</Text>
+          <Text style={[styles.createText, { color: colors.text }]}>Create Workout</Text>
         </TouchableOpacity>
 
         {loading ? (
@@ -206,7 +206,6 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   createText: {
-    color: "#000",
     fontSize: 16,
     fontWeight: "700",
   },
@@ -271,7 +270,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: "rgba(255,255,255,0.1)",
   },
   exerciseCount: {
     fontSize: 13,
