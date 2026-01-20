@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Dimensions, FlatList } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../../../lib/auth/auth-context';
 import { useSQLite } from '../../../lib/sqlite-provider';
@@ -108,19 +108,17 @@ export default function Home() {
 
   if (loading) {
     return (
-      <ScrollView contentContainerStyle={styles.page} style={{ backgroundColor: colors.bg }}>
+      <View style={[styles.page, { backgroundColor: colors.bg }]}>
         <Header title="Home" showBack={false} />
         <View style={styles.center}>
           <Text style={{ color: colors.text }}>Loading…</Text>
         </View>
-      </ScrollView>
+      </View>
     );
   }
 
-  return (
-    <ScrollView contentContainerStyle={styles.page} style={{ backgroundColor: colors.bg }}>
-      <Header title="Home" showBack={false} />
-
+  const renderItem = () => (
+    <View style={{ padding: 16 }}>
       {/* Greeting */}
       <View style={styles.greetingRow}>
         <Text style={[styles.greeting, { color: colors.text }]}>
@@ -205,12 +203,24 @@ export default function Home() {
       </Card>
 
       <View style={{ height: 40 }} />
-    </ScrollView>
+    </View>
+  );
+
+  return (
+    <View style={[styles.page, { backgroundColor: colors.bg }]}>
+      <Header title="Home" showBack={false} />
+      <FlatList
+        data={[{ key: 'home' }]}
+        keyExtractor={(item) => item.key}
+        renderItem={renderItem}
+        showsVerticalScrollIndicator={false}
+      />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  page: { padding: 16 },
+  page: { flex: 1 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', height: 200 },
   greetingRow: { paddingHorizontal: 8, marginTop: 6 },
   greeting: { fontSize: 18, fontWeight: '700' },
