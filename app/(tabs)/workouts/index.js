@@ -91,12 +91,20 @@ export default function Workouts() {
               </Text>
             ) : null}
           </View>
-          <TouchableOpacity
-            onPress={() => deleteWorkout(item.id)}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <Ionicons name="trash-outline" size={20} color="#ff6a6a" />
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            <TouchableOpacity
+              onPress={() => router.push(`/workouts/edit/${item.id}`)}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Ionicons name="pencil-outline" size={20} color={colors.accent} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => deleteWorkout(item.id)}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Ionicons name="trash-outline" size={20} color="#ff6a6a" />
+            </TouchableOpacity>
+          </View>
         </View>
 
         <View style={styles.exerciseList}>
@@ -127,7 +135,6 @@ export default function Workouts() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]}>
-      <Header title="Workouts" showBack={false} />
       <View style={styles.header}>
         <Text style={[styles.subtitle, { color: colors.muted }]}>
           Plan, log, and track your sessions
@@ -140,7 +147,7 @@ export default function Workouts() {
           onPress={() => router.push("/workouts/create")}
           activeOpacity={0.8}
         >
-          <Ionicons name="add-outline" size={22} color="#000" />
+          <Ionicons name="add-outline" size={22} color={colors.text} />
           <Text style={[styles.createText, { color: colors.text }]}>Create Workout</Text>
         </TouchableOpacity>
 
@@ -157,7 +164,7 @@ export default function Workouts() {
               { backgroundColor: colors.cardBg, borderColor: colors.border },
             ]}
           >
-            <Ionicons name="barbell-outline" size={48} color={colors.muted} />
+            <Ionicons name="barbell-outline" size={48} color={colors.accent} />
             <Text style={[styles.placeholderText, { color: colors.muted }]}>
               No workouts yet. Create one to get started!
             </Text>

@@ -1,7 +1,7 @@
-import React, { useEffect, useRef } from 'react';
-import { View, Text, Animated, Easing, Image } from 'react-native';
-import { useRouter } from 'expo-router';
-import { useSettings } from '../lib/settings-context';
+import React, { useEffect, useRef } from "react";
+import { View, Text, Animated, Easing, Image } from "react-native";
+import { useRouter } from "expo-router";
+import { useSettings } from "../lib/settings-context";
 
 export default function SplashAnimation({ onDone }) {
   const router = useRouter();
@@ -15,15 +15,34 @@ export default function SplashAnimation({ onDone }) {
     // Sequence: show logo, then reveal app name, then fade out and navigate
     Animated.sequence([
       // Logo fade-in
-      Animated.timing(opacity, { toValue: 1, duration: 350, useNativeDriver: true, easing: Easing.out(Easing.ease) }),
+      Animated.timing(opacity, {
+        toValue: 1,
+        duration: 350,
+        useNativeDriver: true,
+        easing: Easing.out(Easing.ease),
+      }),
       // Logo scale + move up slightly
       Animated.parallel([
-        Animated.timing(scale, { toValue: 1.05, duration: 350, useNativeDriver: true, easing: Easing.out(Easing.ease) }),
-        Animated.timing(translateY, { toValue: -60, duration: 500, useNativeDriver: true, easing: Easing.out(Easing.ease) }),
+        Animated.timing(scale, {
+          toValue: 1.05,
+          duration: 350,
+          useNativeDriver: true,
+          easing: Easing.out(Easing.ease),
+        }),
+        Animated.timing(translateY, {
+          toValue: -60,
+          duration: 500,
+          useNativeDriver: true,
+          easing: Easing.out(Easing.ease),
+        }),
       ]),
     ]).start(() => {
       // Reveal the app name text after the logo animation
-      Animated.timing(textOpacity, { toValue: 1, duration: 600, useNativeDriver: true }).start(() => {
+      Animated.timing(textOpacity, {
+        toValue: 1,
+        duration: 600,
+        useNativeDriver: true,
+      }).start(() => {
         // Small pause before leaving splash
         setTimeout(() => {
           onDone?.();
@@ -34,14 +53,28 @@ export default function SplashAnimation({ onDone }) {
   }, []);
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center' }}>
+    <View
+      style={{
+        flex: 1,
+        backgroundColor: colors.bg,
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
       <Animated.Image
-        source={require("../prvault_logo.png")} 
-        style={{ width: 180, height: 180, opacity, resizeMode: 'contain', transform: [{ scale }, { translateY }] }}
+        source={require("../prvault_logo.png")}
+        style={{
+          width: 180,
+          height: 180,
+          opacity,
+          resizeMode: "contain",
+          transform: [{ scale }, { translateY }],
+          justifyContent: "center",
+          alignItems: "center",
+          paddingLeft: 20,
+          paddingTop: 40,
+        }}
       />
-      <Animated.Text style={{ marginTop: 16, fontSize: 28, fontWeight: '700', color: colors.accent, opacity: textOpacity }}>
-        PR Vault
-      </Animated.Text>
     </View>
   );
 }

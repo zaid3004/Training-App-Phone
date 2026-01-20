@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Dimensions, FlatList } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { useAuth } from '../../../lib/auth/auth-context';
 import { useSQLite } from '../../../lib/sqlite-provider';
 import { useSettings } from '../../../lib/settings-context';
@@ -55,48 +55,64 @@ export default function Home() {
   const [weightLogs, setWeightLogs] = useState([]);
   const [dailyProgress, setDailyProgress] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [displayName, setDisplayName] = useState('Athlete');
 
-  useEffect(() => {
-    let mounted = true;
-    async function load() {
-      if (!db || !user?.id) return;
-      try {
-        // PRs
-        const prs = await computePRsForUser(db, user.id);
-        if (mounted) {
-          const prData = {};
-          prs.forEach(p => {
-            if (p.exercise.toLowerCase().includes('bench')) prData.bench = p.max_weight;
-            else if (p.exercise.toLowerCase().includes('squat')) prData.squat = p.max_weight;
-            else if (p.exercise.toLowerCase().includes('deadlift')) prData.deadlift = p.max_weight;
-          });
-          setPr(prev => ({ ...prev, ...prData }));
+  useFocusEffect(
+    React.useCallback(() => {
+      let mounted = true;
+      async function load() {
+        if (!db || !user?.id) return;
+        try {
+          // Display name and manual PRs/bodyweight
+          const stats = await db.getFirstAsync('SELECT name, bench, squat, deadlift, bodyweight FROM user_stats WHERE user_id = ?', [user.id]);
+          let manualPrData = {};
+          if (mounted) {
+            setDisplayName(stats?.name || user?.username || 'Athlete');
+            // Manual PRs from user_stats
+            if (stats?.bench) manualPrData.bench = stats.bench;
+            if (stats?.squat) manualPrData.squat = stats.squat;
+            if (stats?.deadlift) manualPrData.deadlift = stats.deadlift;
+          }
+
+          // Auto PRs
+          const prs = await computePRsForUser(db, user.id);
+          if (mounted) {
+            const prData = { ...manualPrData };
+            prs.forEach(p => {
+              if (p.exercise.toLowerCase().includes('bench') && !prData.bench) prData.bench = p.max_weight;
+              else if (p.exercise.toLowerCase().includes('squat') && !prData.squat) prData.squat = p.max_weight;
+              else if (p.exercise.toLowerCase().includes('deadlift') && !prData.deadlift) prData.deadlift = p.max_weight;
+            });
+            setPr(prData);
+          }
+
+          // Weight logs
+          const logs = await db.getAllAsync('SELECT ts, weight FROM bodyweight_logs WHERE user_id = ? ORDER BY ts DESC LIMIT 12', [user.id]);
+          if (mounted) setWeightLogs(logs || []);
+
+          // Daily progress: 100 if logged bodyweight or workout today, 0 otherwise
+          const todayKey = new Date().toISOString().slice(0, 10);
+          const hasBodyweightToday = (logs || []).some(l => l.ts === todayKey);
+          const hasWorkoutToday = await db.getFirstAsync('SELECT id FROM workout_logs WHERE user_id = ? AND DATE(completed_at) = ?', [user.id, todayKey]);
+          const progress = (hasBodyweightToday || hasWorkoutToday) ? 100 : 0;
+          if (mounted) setDailyProgress(progress);
+        } catch (e) {
+          console.log('HOME LOAD ERR:', e);
+        } finally {
+          if (mounted) setLoading(false);
         }
-
-        // Weight logs
-        const logs = await db.getAllAsync('SELECT ts, weight FROM bodyweight_logs WHERE user_id = ? ORDER BY ts DESC LIMIT 12', [user.id]);
-        if (mounted) setWeightLogs(logs || []);
-
-        // Daily progress: 100 if logged today, 0 otherwise
-        const todayKey = new Date().toISOString().slice(0, 10);
-        const hasToday = (logs || []).some(l => l.ts === todayKey);
-        if (mounted) setDailyProgress(hasToday ? 100 : 0);
-      } catch (e) {
-        console.log('HOME LOAD ERR:', e);
-      } finally {
-        if (mounted) setLoading(false);
       }
-    }
-    load();
-    return () => { mounted = false; };
-  }, [db, user?.id]);
+      load();
+      return () => { mounted = false; };
+    }, [db, user?.id])
+  );
 
-  const username = user?.username ?? 'Athlete';
+
 
   const quickActions = [
     { label: 'Start Workout', onPress: () => router.push('/workouts/create') },
     { label: 'Log Workout', onPress: () => router.push('/workouts/create') },
-    { label: 'Profile', onPress: () => router.push('/profile') },
+    { label: 'PRs', onPress: () => router.push('/profile') },
     { label: 'Settings', onPress: () => router.push('/settings') },
   ];
 
@@ -122,7 +138,7 @@ export default function Home() {
       {/* Greeting */}
       <View style={styles.greetingRow}>
         <Text style={[styles.greeting, { color: colors.text }]}>
-          Welcome back, <Text style={{ color: colors.accent }}>{username}</Text>
+          Welcome back, <Text style={{ color: colors.accent }}>{displayName}</Text>
         </Text>
         <Text style={[styles.sub, { color: colors.muted }]}>Track your progress. Stay consistent.</Text>
       </View>
@@ -141,15 +157,15 @@ export default function Home() {
           <Text style={[styles.sectionTitle, { color: colors.text }]}>PR Summary</Text>
           <View style={styles.prRow}>
             <View style={styles.prCol}>
-              <Text style={[styles.prLabel, { color: colors.muted }]}>Bench</Text>
+              <Text style={[styles.prLabel, { color: colors.accent }]}>Bench</Text>
               <Text style={[styles.prValue, { color: colors.text }]}>{pr.bench}</Text>
             </View>
             <View style={styles.prCol}>
-              <Text style={[styles.prLabel, { color: colors.muted }]}>Squat</Text>
+              <Text style={[styles.prLabel, { color: colors.accent }]}>Squat</Text>
               <Text style={[styles.prValue, { color: colors.text }]}>{pr.squat}</Text>
             </View>
             <View style={styles.prCol}>
-              <Text style={[styles.prLabel, { color: colors.muted }]}>Deadlift</Text>
+              <Text style={[styles.prLabel, { color: colors.accent }]}>Deadlift</Text>
               <Text style={[styles.prValue, { color: colors.text }]}>{pr.deadlift}</Text>
             </View>
           </View>
@@ -161,7 +177,7 @@ export default function Home() {
         <Text style={[styles.sectionTitle, { color: colors.text }]}>Quick Actions</Text>
         <View style={styles.actionsRow}>
           {quickActions.map((a, i) => (
-            <TouchableOpacity key={i} style={[styles.actionBtn, { backgroundColor: colors.cardBg, borderColor: colors.border }]} onPress={a.onPress}>
+            <TouchableOpacity key={i} style={[styles.actionBtn, { backgroundColor: colors.cardBg, borderColor: colors.accent }]} onPress={a.onPress}>
               <Text style={{ color: colors.text }}>{a.label}</Text>
             </TouchableOpacity>
           ))}
@@ -170,7 +186,7 @@ export default function Home() {
 
       {/* Bodyweight */}
       <Card style={{ marginVertical: 8 }}>
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>Bodyweight (recent)</Text>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>Bodyweight <Text style={{ color: colors.accent }}>(recent)</Text></Text>
         <MiniChart data={weightLogs} colors={colors} />
         <Text style={[styles.muted, { color: colors.muted }]}>
           Last {Math.min(12, weightLogs.length)} entries
@@ -208,7 +224,6 @@ export default function Home() {
 
   return (
     <View style={[styles.page, { backgroundColor: colors.bg }]}>
-      <Header title="Home" showBack={false} />
       <FlatList
         data={[{ key: 'home' }]}
         keyExtractor={(item) => item.key}
@@ -238,7 +253,7 @@ const styles = StyleSheet.create({
   prCol: { alignItems: 'center', flex: 1 },
   prLabel: { fontSize: 12 },
   prValue: { fontWeight: '700', marginTop: 4 },
-  actionsRow: { flexDirection: 'row', gap: 8, justifyContent: 'space-between', marginTop: 8 },
+  actionsRow: { flexDirection: 'row', gap: 8, justifyContent: 'center', marginTop: 8 },
   actionBtn: { paddingVertical: 12, paddingHorizontal: 8, borderRadius: 8, alignItems: 'center', borderWidth: 1 },
   miniChartWrap: { flexDirection: 'row', alignItems: 'flex-end', height: 70, marginVertical: 8 },
   miniBarCol: { flex: 1, alignItems: 'center', justifyContent: 'flex-end' },

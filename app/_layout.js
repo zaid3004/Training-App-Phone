@@ -9,11 +9,7 @@ export default function RootLayout() {
     <SQLiteProvider>
       <AuthProvider>
         <SettingsProvider>
-          <Stack screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="index" />
-            <Stack.Screen name="auth/login" />
-            <Stack.Screen name="auth/register" />
-          </Stack>
+          <Stack screenOptions={{ headerShown: false }} />
         </SettingsProvider>
       </AuthProvider>
     </SQLiteProvider>

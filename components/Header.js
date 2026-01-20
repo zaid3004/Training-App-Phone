@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSettings } from '../lib/settings-context';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function Header({ title, showBack = true, right }) {
   const router = useRouter();
@@ -11,7 +12,7 @@ export default function Header({ title, showBack = true, right }) {
     <View style={[styles.header, { backgroundColor: colors.bg, borderBottomColor: colors.border }]}> 
       {showBack ? (
         <TouchableOpacity onPress={() => router.back()} style={styles.back}> 
-          <Text style={{ color: colors.accent }}>Back</Text>
+          <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
       ) : (
         <View style={styles.spacer} />
