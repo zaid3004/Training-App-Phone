@@ -28,10 +28,25 @@ export default function ExercisePicker({ value, onChange, placeholder = 'Select 
     return builtins.filter(e => e.name.toLowerCase().includes(q));
   }, [query, builtins]);
 
-  const results = [...filtered, OTHER_ITEM];
+  const results = useMemo(() => {
+    const q = query.trim();
+    let res = [];
+    if (q) {
+      const exists = builtins.some(e => e.name.toLowerCase() === q.toLowerCase());
+      if (!exists) {
+        res.push({ id: '__custom__', name: q, isCustom: true });
+      }
+    }
+    res.push(...filtered, OTHER_ITEM);
+    return res;
+  }, [query, filtered, builtins]);
 
   function selectBuiltin(item) {
     onChange({ id: item.id, name: item.name, source: 'builtin' });
+  }
+
+  function selectCustom(item) {
+    onChange({ id: 'custom-' + Date.now(), name: item.name, source: 'custom' });
   }
 
   function selectOther() {
@@ -66,6 +81,10 @@ export default function ExercisePicker({ value, onChange, placeholder = 'Select 
           item.id === '__other__' ? (
             <TouchableOpacity onPress={selectOther} style={styles.item}>
               <Text style={styles.itemText}>Other</Text>
+            </TouchableOpacity>
+          ) : item.isCustom ? (
+            <TouchableOpacity onPress={() => selectCustom(item)} style={styles.item}>
+              <Text style={styles.itemText}>{item.name} (Custom)</Text>
             </TouchableOpacity>
           ) : (
             <TouchableOpacity onPress={() => selectBuiltin(item)} style={styles.item}>
