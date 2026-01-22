@@ -6,60 +6,33 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
+  Alert,
 } from "react-native";
 
-import * as Crypto from "expo-crypto";
-import { useSQLite } from "../../lib/sqlite-provider";
 import { useAuth } from "../../lib/auth/auth-context";
 import { useRouter } from "expo-router";
 
 export default function Login() {
   const router = useRouter();
   const { login } = useAuth();
-  const { getFirstAsync } = useSQLite(); // FIXED NAME
 
-  const [username, setUsername] = useState("");
+  const [identifier, setIdentifier] = useState(""); // email or username
   const [password, setPassword] = useState("");
-  const [err, setErr] = useState("");
   const [loading, setLoading] = useState(false);
 
   async function handleLogin() {
-    if (!username.trim() || !password.trim()) {
-      setErr("Fields cannot be empty.");
+    if (!identifier.trim() || !password.trim()) {
+      Alert.alert("Error", "Fields cannot be empty.");
       return;
     }
 
     try {
-      setErr("");
       setLoading(true);
-
-      const passwordHash = await Crypto.digestStringAsync(
-        Crypto.CryptoDigestAlgorithm.SHA256,
-        password
-      );
-
-      const user = await getFirstAsync(
-        "SELECT * FROM users WHERE username = ? AND password_hash = ?",
-        [username, passwordHash]
-      );
-
-      if (!user) {
-        setErr("Invalid username or password.");
-        setLoading(false);
-        return;
-      }
-
-      // 🧨 IMPORTANT FIX — store only id & username, guaranteed
-      login({
-        id: user.id,
-        username: user.username,
-      });
-
-      router.replace("/(tabs)");
-    } catch (e) {
-      console.log("LOGIN ERROR:", e);
-      setErr("Login failed. Try again.");
+      await login(identifier, password);
+      router.replace("/(tabs)/home");
+    } catch (error) {
       setLoading(false);
+      Alert.alert("Login Failed", error.message);
     }
   }
 
@@ -67,14 +40,13 @@ export default function Login() {
     <View style={styles.container}>
       <Text style={styles.title}>Welcome Back</Text>
 
-      {err ? <Text style={styles.error}>{err}</Text> : null}
-
       <TextInput
         style={styles.input}
-        placeholder="Username"
+        placeholder="Email or Username"
         placeholderTextColor="#999"
-        value={username}
-        onChangeText={setUsername}
+        value={identifier}
+        onChangeText={setIdentifier}
+        autoCapitalize="none"
       />
 
       <TextInput
@@ -99,7 +71,7 @@ export default function Login() {
       </TouchableOpacity>
 
       <TouchableOpacity
-        onPress={() => router.push("/auth/register")}
+        onPress={() => router.replace("/auth/register")}
         style={{ marginTop: 20 }}
       >
         <Text style={styles.switchText}>No account? Register</Text>
@@ -120,11 +92,6 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#fff",
     marginBottom: 40,
-  },
-  error: {
-    color: "#fff",
-    marginBottom: 15,
-    fontSize: 14,
   },
   input: {
     backgroundColor: "#111",

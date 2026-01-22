@@ -1,3 +1,4 @@
+//profiles/index.js
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, Alert, Image } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -23,10 +24,10 @@ export default function Profile() {
   }, [user?.id]);
 
   async function loadProfile() {
-    if (!user?.id) return;
+    if (!user?.uid) return;
 
     try {
-      const stats = await db.getFirstAsync('SELECT name, bodyweight, bench, squat, deadlift FROM user_stats WHERE user_id = ?', [user.id]);
+      const stats = await db.getFirstAsync('SELECT name, bodyweight, bench, squat, deadlift FROM user_stats WHERE user_id = ?', [user.uid]);
       if (stats) {
         setName(stats.name || '');
         setBodyweight(stats.bodyweight?.toString() || '');
@@ -37,7 +38,7 @@ export default function Profile() {
         });
       }
 
-      const pic = await AsyncStorage.getItem(`profilePic_${user.id}`);
+      const pic = await AsyncStorage.getItem(`profilePic_${user.uid}`);
       setProfilePic(pic);
     } catch (e) {
       console.log('Load profile error:', e);
@@ -45,37 +46,57 @@ export default function Profile() {
   }
 
   async function saveProfile() {
-    if (!user?.id) return;
+    if (!user?.uid) return;
 
     try {
       await db.execAsync(
-        `UPDATE user_stats SET name = '${name.replace(/'/g, "''")}', bodyweight = ${bodyweight || null}, bench = ${prs.bench || null}, squat = ${prs.squat || null}, deadlift = ${prs.deadlift || null} WHERE user_id = '${user.id}'`
+        `INSERT OR REPLACE INTO user_stats (user_id, name, bodyweight, bench, squat, deadlift) VALUES ('${user.uid.replace(/'/g, "''")}', '${name.replace(/'/g, "''")}', ${bodyweight || null}, ${prs.bench || null}, ${prs.squat || null}, ${prs.deadlift || null})`
       );
 
       // Update user_prs for manual PRs
       const date = new Date().toISOString();
       if (prs.bench) {
         await db.execAsync(
-          `INSERT OR REPLACE INTO user_prs (user_id, exercise, max_weight, date, reps) VALUES ('${user.id}', 'bench', ${prs.bench}, '${date}', 1)`
+          `INSERT OR REPLACE INTO user_prs (user_id, exercise, max_weight, date, reps) VALUES ('${user.uid}', 'bench', ${prs.bench}, '${date}', 1)`
         );
       }
       if (prs.squat) {
         await db.execAsync(
-          `INSERT OR REPLACE INTO user_prs (user_id, exercise, max_weight, date, reps) VALUES ('${user.id}', 'squat', ${prs.squat}, '${date}', 1)`
+          `INSERT OR REPLACE INTO user_prs (user_id, exercise, max_weight, date, reps) VALUES ('${user.uid}', 'squat', ${prs.squat}, '${date}', 1)`
         );
       }
       if (prs.deadlift) {
         await db.execAsync(
-          `INSERT OR REPLACE INTO user_prs (user_id, exercise, max_weight, date, reps) VALUES ('${user.id}', 'deadlift', ${prs.deadlift}, '${date}', 1)`
+          `INSERT OR REPLACE INTO user_prs (user_id, exercise, max_weight, date, reps) VALUES ('${user.uid}', 'deadlift', ${prs.deadlift}, '${date}', 1)`
         );
       }
 
-      Alert.alert('Saved', 'Profile updated successfully', [
-        { text: 'OK', onPress: () => router.push('/(tabs)/home') }
+      Alert.alert('Profile Updated', 'Your profile has been successfully updated.', [
+        { text: 'OK', onPress: () => router.push('/(tabs)/home?refresh=' + Date.now()) }
       ]);
     } catch (e) {
       console.log('Save profile error:', e);
       Alert.alert('Error', 'Could not save profile');
+    }
+  }
+
+  async function logBodyweight() {
+    if (!user?.uid) return;
+
+    try {
+      const stats = await db.getFirstAsync('SELECT bodyweight FROM user_stats WHERE user_id = ?', [user.uid]);
+      if (stats?.bodyweight) {
+        const today = new Date().toISOString().slice(0, 10);
+        await db.execAsync(
+          `INSERT OR REPLACE INTO bodyweight_logs (id, user_id, ts, weight) VALUES ('${Date.now()}', '${user.uid}', '${today}', ${stats.bodyweight})`
+        );
+        Alert.alert('Logged', 'Bodyweight logged for today');
+      } else {
+        Alert.alert('No bodyweight', 'Set your bodyweight first');
+      }
+    } catch (e) {
+      console.log('Log bodyweight error:', e);
+      Alert.alert('Error', 'Could not log bodyweight');
     }
   }
 
@@ -96,7 +117,7 @@ export default function Profile() {
     if (!result.canceled) {
       const uri = result.assets[0].uri;
       setProfilePic(uri);
-      await AsyncStorage.setItem(`profilePic_${user.id}`, uri);
+      await AsyncStorage.setItem(`profilePic_${user.uid}`, uri);
     }
   }
 
@@ -181,6 +202,10 @@ export default function Profile() {
           <Text style={styles.saveText}>Save Profile</Text>
         </TouchableOpacity>
 
+        <TouchableOpacity style={[styles.logBtn, { borderColor: colors.border }]} onPress={logBodyweight}>
+          <Text style={{ color: colors.text }}>Log Current Bodyweight</Text>
+        </TouchableOpacity>
+
         <View style={{ height: 40 }} />
       </View>
     </ScrollView>
@@ -200,4 +225,5 @@ const styles = StyleSheet.create({
   input: { height: 40, borderWidth: 1, borderRadius: 8, paddingHorizontal: 12 },
   saveBtn: { paddingVertical: 12, borderRadius: 8, alignItems: 'center', marginTop: 20 },
   saveText: { color: '#000', fontWeight: '700' },
+  logBtn: { paddingVertical: 10, borderRadius: 6, borderWidth: 1, alignItems: 'center', marginTop: 12 },
 });

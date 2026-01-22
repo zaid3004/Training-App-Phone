@@ -1,10 +1,15 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Dimensions, FlatList } from 'react-native';
-import { useRouter, useFocusEffect } from 'expo-router';
+//home/index.js 
+import React, { use, useEffect, useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Dimensions, FlatList, ActivityIndicator, InteractionManager } from 'react-native';
+import { useRouter, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useAuth } from '../../../lib/auth/auth-context';
 import { useSQLite } from '../../../lib/sqlite-provider';
 import { useSettings } from '../../../lib/settings-context';
+import { getDoc, doc, serverTimestamp } from 'firebase/firestore';
+import { db as firestoreDb } from '../../../lib/firebase';
+import { setUserDocWithRetry } from '../../../lib/auth/auth-context';
 import { computePRsForUser } from '../../../lib/prs-utils';
+import { MOTIVATIONAL_QUOTES } from '../../../constants/motivationalQuotes';
 import Header from '../../../components/Header';
 import Card from '../../../components/Card';
 
@@ -46,88 +51,155 @@ function MiniChart({ data, colors }) {
 }
 
 export default function Home() {
-  const router = useRouter();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const db = useSQLite();
   const { colors } = useSettings();
-
+  const params = useLocalSearchParams();
+  const router = useRouter();
+  const [displayName, setDisplayName] = useState(user?.displayName || 'Athlete');
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [pageLoading, setPageLoading] = useState(true);
   const [pr, setPr] = useState({ bench: '-', squat: '-', deadlift: '-' });
   const [weightLogs, setWeightLogs] = useState([]);
+  const [recentWorkouts, setRecentWorkouts] = useState([]);
   const [dailyProgress, setDailyProgress] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [displayName, setDisplayName] = useState('Athlete');
+  const [motivationalQuote, setMotivationalQuote] = useState('');
+
+  // Set random motivational quote on mount
+  useEffect(() => {
+    const randomQuote = MOTIVATIONAL_QUOTES[Math.floor(Math.random() * MOTIVATIONAL_QUOTES.length)];
+    setMotivationalQuote(randomQuote);
+  }, []);
+
+  // Force reload when navigated with refresh param (e.g., from profile save)
+  useEffect(() => {
+    if (params.refresh) {
+      setRefreshKey(prev => prev + 1);
+    }
+  }, [params.refresh]);
 
   useFocusEffect(
     React.useCallback(() => {
+      setRefreshKey(prev => prev + 1);
       let mounted = true;
-      async function load() {
-        if (!db || !user?.id) return;
+
+      // Defer heavy loading after first paint
+      const task = InteractionManager.runAfterInteractions(async () => {
+        console.time('home_load_total');
+        if (!db || !user?.uid) {
+          setPageLoading(false);
+          return;
+        }
+
+        // Check if Firestore doc exists; create if missing
+        console.time('firestore_check');
         try {
-          // Display name and manual PRs/bodyweight
-          const stats = await db.getFirstAsync('SELECT name, bench, squat, deadlift, bodyweight FROM user_stats WHERE user_id = ?', [user.id]);
-          let manualPrData = {};
+          const userDoc = await getDoc(doc(firestoreDb, 'users', user.uid));
+          if (!userDoc.exists()) {
+            await setUserDocWithRetry(firestoreDb, user.uid, {
+              email: user.email,
+              username: user.displayName || 'User',
+              createdAt: serverTimestamp(),
+              updatedAt: serverTimestamp(),
+            });
+          }
+        } catch (e) {
+          // Silent fail for Firestore issues
+        }
+        console.timeEnd('firestore_check');
+
+        try {
+          console.time('db_queries');
+          const [stats, prs, logs, workouts] = await Promise.all([
+            db.getFirstAsync('SELECT name, bench, squat, deadlift, bodyweight FROM user_stats WHERE user_id = ?', [user.uid]),
+            computePRsForUser(db, user.uid),
+            db.getAllAsync('SELECT ts, weight FROM bodyweight_logs WHERE user_id = ? ORDER BY ts DESC LIMIT 12', [user.uid]),
+            db.getAllAsync(`
+              SELECT wl.id, wl.completed_at, w.name, w.exercises
+              FROM workout_logs wl
+              JOIN workouts w ON wl.workout_id = w.id
+              WHERE wl.user_id = ?
+              ORDER BY wl.completed_at DESC
+              LIMIT 3
+             `, [user.uid])
+          ]);
+          console.timeEnd('db_queries');
+
+
+
           if (mounted) {
-            setDisplayName(stats?.name || user?.username || 'Athlete');
-            // Manual PRs from user_stats
+          // Display name
+          const newDisplayName = stats?.name || user?.displayName || 'Athlete';
+          setDisplayName(newDisplayName);
+
+            // PRs
+            let manualPrData = {};
             if (stats?.bench) manualPrData.bench = stats.bench;
             if (stats?.squat) manualPrData.squat = stats.squat;
             if (stats?.deadlift) manualPrData.deadlift = stats.deadlift;
-          }
 
-          // Auto PRs
-          const prs = await computePRsForUser(db, user.id);
-          if (mounted) {
             const prData = { ...manualPrData };
             prs.forEach(p => {
               if (p.exercise.toLowerCase().includes('bench') && !prData.bench) prData.bench = p.max_weight;
               else if (p.exercise.toLowerCase().includes('squat') && !prData.squat) prData.squat = p.max_weight;
               else if (p.exercise.toLowerCase().includes('deadlift') && !prData.deadlift) prData.deadlift = p.max_weight;
             });
-            setPr(prData);
+          setPr(prData);
+
+          // Weight logs and workouts
+          setWeightLogs(logs || []);
+          setRecentWorkouts(workouts || []);
+
+            // Progress calculation
+            let progress = 0;
+            if (workouts && workouts.length > 0) {
+              const lastWorkout = workouts[0];
+              let totalSets = 0;
+              try {
+                const ex = JSON.parse(lastWorkout.exercises);
+                totalSets = ex.reduce((sum, e) => sum + (Number(e.sets) || 1), 0);
+              } catch (e) {}
+              // Note: Progress calculation moved to separate query if needed, but for simplicity, keep sequential
+              const completedCount = await db.getFirstAsync('SELECT COUNT(*) as count FROM workout_sets WHERE workout_log_id = ? AND completed = 1', [lastWorkout.id]);
+              const completedSets = completedCount?.count || 0;
+              progress = totalSets > 0 ? Math.round((completedSets / totalSets) * 100) : 0;
+            }
+            setDailyProgress(progress);
           }
-
-          // Weight logs
-          const logs = await db.getAllAsync('SELECT ts, weight FROM bodyweight_logs WHERE user_id = ? ORDER BY ts DESC LIMIT 12', [user.id]);
-          if (mounted) setWeightLogs(logs || []);
-
-          // Daily progress: 100 if logged bodyweight or workout today, 0 otherwise
-          const todayKey = new Date().toISOString().slice(0, 10);
-          const hasBodyweightToday = (logs || []).some(l => l.ts === todayKey);
-          const hasWorkoutToday = await db.getFirstAsync('SELECT id FROM workout_logs WHERE user_id = ? AND DATE(completed_at) = ?', [user.id, todayKey]);
-          const progress = (hasBodyweightToday || hasWorkoutToday) ? 100 : 0;
-          if (mounted) setDailyProgress(progress);
         } catch (e) {
-          console.log('HOME LOAD ERR:', e);
+          // Silent error handling for production
         } finally {
-          if (mounted) setLoading(false);
+          console.timeEnd('home_load_total');
+          if (mounted) setPageLoading(false);
         }
-      }
-      load();
-      return () => { mounted = false; };
-    }, [db, user?.id])
+      });
+
+      return () => task.cancel();
+    }, [db, user?.uid])
   );
 
 
 
   const quickActions = [
-    { label: 'Start Workout', onPress: () => router.push('/workouts/create') },
-    { label: 'Log Workout', onPress: () => router.push('/workouts/create') },
-    { label: 'PRs', onPress: () => router.push('/profile') },
-    { label: 'Settings', onPress: () => router.push('/settings') },
+    { label: 'Log Workout', onPress: () => router.push('/workouts') },
+    { label: 'Create Workout', onPress: () => router.push('/workouts/create') },
+    { label: 'Personal Records', onPress: () => router.push('/profile') },
+    { label: 'Edit Settings', onPress: () => router.push('/settings') },
   ];
 
-  const recentItems = (weightLogs || []).slice(0, 6).map((l) => ({
-    id: `${l.ts}-${l.weight}`,
-    title: `Bodyweight: ${l.weight}`,
-    date: l.ts,
+  const recentItems = recentWorkouts.map((w) => ({
+    id: w.id,
+    title: w.name,
+    date: w.completed_at,
   }));
 
-  if (loading) {
+  if (pageLoading) {
     return (
       <View style={[styles.page, { backgroundColor: colors.bg }]}>
         <Header title="Home" showBack={false} />
         <View style={styles.center}>
-          <Text style={{ color: colors.text }}>Loading…</Text>
+          <ActivityIndicator size="large" color={colors.accent} />
+          <Text style={{ color: colors.text, marginTop: 7, marginBottom: 20 }}>Loading…</Text>
         </View>
       </View>
     );
@@ -154,7 +226,7 @@ export default function Home() {
         </View>
 
         <View style={styles.cardRight}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>PR Summary</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>PR Summary (KG's)</Text>
           <View style={styles.prRow}>
             <View style={styles.prCol}>
               <Text style={[styles.prLabel, { color: colors.accent }]}>Bench</Text>
@@ -175,12 +247,21 @@ export default function Home() {
       {/* Quick Actions */}
       <Card style={{ marginVertical: 8 }}>
         <Text style={[styles.sectionTitle, { color: colors.text }]}>Quick Actions</Text>
-        <View style={styles.actionsRow}>
-          {quickActions.map((a, i) => (
-            <TouchableOpacity key={i} style={[styles.actionBtn, { backgroundColor: colors.cardBg, borderColor: colors.accent }]} onPress={a.onPress}>
-              <Text style={{ color: colors.text }}>{a.label}</Text>
-            </TouchableOpacity>
-          ))}
+        <View style={styles.actionsContainer}>
+          <View style={styles.actionsRow}>
+            {quickActions.slice(0, 2).map((a, i) => (
+              <TouchableOpacity key={i} style={[styles.actionBtn, { backgroundColor: colors.cardBg, borderColor: colors.accent }]} onPress={a.onPress}>
+                <Text style={{ color: colors.text }}>{a.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          <View style={styles.actionsRow}>
+            {quickActions.slice(2, 4).map((a, i) => (
+              <TouchableOpacity key={i + 2} style={[styles.actionBtn, { backgroundColor: colors.cardBg, borderColor: colors.accent }]} onPress={a.onPress}>
+                <Text style={{ color: colors.text }}>{a.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
       </Card>
 
@@ -211,10 +292,10 @@ export default function Home() {
       {/* Motivation */}
       <Card style={{ marginVertical: 8 }}>
         <Text style={[styles.sectionTitle, { color: colors.text, marginBottom: 8 }]}>
-          Keep the streak alive
+          Daily Motivation
         </Text>
-        <Text style={[styles.muted, { color: colors.muted }]}>
-          Consistency beats intensity. Log at least one entry per day to maintain your streak.
+        <Text style={[styles.muted, { color: colors.muted, fontStyle: 'italic' }]}>
+          {motivationalQuote || 'Loading...'}
         </Text>
       </Card>
 
@@ -229,6 +310,7 @@ export default function Home() {
         keyExtractor={(item) => item.key}
         renderItem={renderItem}
         showsVerticalScrollIndicator={false}
+        extraData={[displayName, refreshKey]}
       />
     </View>
   );
@@ -253,8 +335,9 @@ const styles = StyleSheet.create({
   prCol: { alignItems: 'center', flex: 1 },
   prLabel: { fontSize: 12 },
   prValue: { fontWeight: '700', marginTop: 4 },
-  actionsRow: { flexDirection: 'row', gap: 8, justifyContent: 'center', marginTop: 8 },
-  actionBtn: { paddingVertical: 12, paddingHorizontal: 8, borderRadius: 8, alignItems: 'center', borderWidth: 1 },
+  actionsContainer: { marginTop: 8 },
+  actionsRow: { flexDirection: 'row', gap: 8, justifyContent: 'center', marginBottom: 8 },
+  actionBtn: { paddingVertical: 15, paddingHorizontal: 5, borderRadius: 8, alignItems: 'center', justifyContent: 'center', borderWidth: 1, minWidth: 85, flex: 1},
   miniChartWrap: { flexDirection: 'row', alignItems: 'flex-end', height: 70, marginVertical: 8 },
   miniBarCol: { flex: 1, alignItems: 'center', justifyContent: 'flex-end' },
   miniBar: { width: 6, borderRadius: 3, marginHorizontal: 1 },

@@ -1,10 +1,8 @@
 import React, { useEffect, useRef } from "react";
-import { View, Text, Animated, Easing, Image } from "react-native";
-import { useRouter } from "expo-router";
+import { View, Animated, Easing } from "react-native";
 import { useSettings } from "../lib/settings-context";
 
 export default function SplashAnimation({ onDone }) {
-  const router = useRouter();
   const { colors } = useSettings();
   const opacity = useRef(new Animated.Value(0)).current;
   const scale = useRef(new Animated.Value(0.8)).current;
@@ -12,7 +10,7 @@ export default function SplashAnimation({ onDone }) {
   const textOpacity = useRef(new Animated.Value(0)).current; // for the app name text
 
   useEffect(() => {
-    // Sequence: show logo, then reveal app name, then fade out and navigate
+    // Sequence: show logo then fade out and navigate
     Animated.sequence([
       // Logo fade-in
       Animated.timing(opacity, {
@@ -37,7 +35,6 @@ export default function SplashAnimation({ onDone }) {
         }),
       ]),
     ]).start(() => {
-      // Reveal the app name text after the logo animation
       Animated.timing(textOpacity, {
         toValue: 1,
         duration: 600,
@@ -46,7 +43,6 @@ export default function SplashAnimation({ onDone }) {
         // Small pause before leaving splash
         setTimeout(() => {
           onDone?.();
-          router.replace("/(tabs)/home");
         }, 400);
       });
     });

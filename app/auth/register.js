@@ -7,63 +7,46 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
+  Alert,
 } from "react-native";
 
-import * as Crypto from "expo-crypto";
-import { useSQLite } from "../../lib/sqlite-provider";
+import { useAuth } from "../../lib/auth/auth-context";
 import { useRouter } from "expo-router";
 
 export default function Register() {
   const router = useRouter();
-  const { runAsync } = useSQLite(); // UPDATED 🔥
+  const { register } = useAuth();
 
+  const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [err, setErr] = useState("");
 
-  function generateId() {
-    // 🔥 SAFEST UUID FALLBACK
-    return Crypto.randomUUID
-      ? Crypto.randomUUID()
-      : String(Date.now()) + Math.random().toString(16).slice(2);
-  }
+
 
   async function handleRegister() {
-    if (!username.trim() || !password.trim()) {
-      setErr("Fields cannot be empty.");
+
+    if ( loading ) return;
+
+    if (!email.trim() || !username.trim() || !password.trim()) {
+      Alert.alert("Error", "All fields are required.");
       return;
     }
 
+    setLoading(true);
+
     try {
-      setErr("");
-      setLoading(true);
-
-      // hash password
-      const passwordHash = await Crypto.digestStringAsync(
-        Crypto.CryptoDigestAlgorithm.SHA256,
-        password
+      console.log('Calling register');
+      await register(email.trim(), username.trim(), password);
+      console.log('Register successful, navigating to home');
+      router.replace("/home");
+    } catch (error) {
+      console.log('Register failed:', error);
+      Alert.alert(
+        "Registration Failed", 
+        error?.message || "An error occurred during registration. Please try again."
       );
-
-      const id = generateId(); // UPDATED 🔥
-
-      // insert into users
-      await runAsync(
-        "INSERT INTO users (id, username, password_hash, created_at) VALUES (?, ?, ?, ?)",
-        [id, username, passwordHash, new Date().toISOString()]
-      );
-
-      // create empty stats row
-      await runAsync(
-        "INSERT INTO user_stats (user_id, name, bodyweight, bench, squat, deadlift, preferences) VALUES (?, ?, ?, ?, ?, ?, ?)",
-        [id, "", 0, 0, 0, 0, "{}"]
-      );
-
-      setLoading(false);
-      router.replace("/auth/login");
-    } catch (e) {
-      console.log("REGISTER ERROR:", e);
-      setErr("Username already exists or database error.");
+    } finally {
       setLoading(false);
     }
   }
@@ -72,7 +55,15 @@ export default function Register() {
     <View style={styles.container}>
       <Text style={styles.title}>Create Account</Text>
 
-      {err ? <Text style={styles.error}>{err}</Text> : null}
+      <TextInput
+        style={styles.input}
+        placeholder="Email"
+        placeholderTextColor="#999"
+        value={email}
+        onChangeText={setEmail}
+        keyboardType="email-address"
+        autoCapitalize="none"
+      />
 
       <TextInput
         style={styles.input}
@@ -80,6 +71,7 @@ export default function Register() {
         placeholderTextColor="#999"
         value={username}
         onChangeText={setUsername}
+        autoCapitalize="none"
       />
 
       <TextInput
@@ -113,9 +105,6 @@ export default function Register() {
   );
 }
 
-// ======================
-//      STYLES (UNCHANGED)
-// ======================
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -129,12 +118,6 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#FFF",
     marginBottom: 40,
-  },
-
-  error: {
-    color: "#FFF",
-    marginBottom: 15,
-    fontSize: 14,
   },
 
   input: {

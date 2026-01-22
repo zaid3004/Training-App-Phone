@@ -9,6 +9,7 @@ import {
   ScrollView,
   Alert,
   TextInput,
+  ActivityIndicator,
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -34,16 +35,23 @@ export default function WorkoutDetail() {
 
   useEffect(() => {
     loadWorkout();
-  }, [id]);
+  }, [id, user]);
 
   async function loadWorkout() {
-    if (!user?.id || !id) return;
+    console.log('loadWorkout called for id:', id, 'user:', user?.uid);
+    if (!user?.uid || !id) {
+      console.log('loadWorkout: missing user or id');
+      setLoading(false);
+      return;
+    }
 
     try {
+      console.log('loadWorkout: querying DB');
       const row = await db.getFirstAsync(
         "SELECT * FROM workouts WHERE id = ? AND user_id = ?",
-        [id, user.id]
+        [id, user.uid]
       );
+      console.log('loadWorkout: DB result:', row);
 
       if (row) {
         setWorkout(row);
@@ -70,6 +78,7 @@ export default function WorkoutDetail() {
     } catch (e) {
       console.log("Load workout error:", e);
     } finally {
+      console.log('loadWorkout: setting loading to false');
       setLoading(false);
     }
   }
@@ -106,8 +115,8 @@ export default function WorkoutDetail() {
 
       // Save workout log
       await db.execAsync(
-        `INSERT INTO workout_logs (id, user_id, workout_id, completed_at, duration, notes)
-         VALUES ('${logId}', '${user.id}', '${id}', '${completedAt}', ${duration}, '')`
+         `INSERT INTO workout_logs (id, user_id, workout_id, completed_at, duration, notes)
+         VALUES ('${logId}', '${user.uid}', '${id}', '${completedAt}', ${duration}, '')`
       );
 
       // Save individual sets
@@ -155,7 +164,8 @@ export default function WorkoutDetail() {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]}>
         <View style={styles.centered}>
-          <Text style={[styles.text, { color: colors.text }]}>Loading workout...</Text>
+          <ActivityIndicator size="large" color={colors.accent} />
+          <Text style={[styles.text, { color: colors.text, marginTop: 7 }]}>Loading workout...</Text>
         </View>
       </SafeAreaView>
     );
@@ -367,18 +377,18 @@ const styles = StyleSheet.create({
   exercisePreview: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 8,
+    padding: 8,
+    borderRadius: 6,
+    marginBottom: 4,
     borderWidth: 1,
   },
   exerciseName: {
-    fontSize: 15,
-    fontWeight: "600",
+    fontSize: 16,
+    fontWeight: "700",
   },
   exerciseDetail: {
-    fontSize: 13,
-    marginTop: 2,
+    fontSize: 12,
+    marginTop: 1,
   },
   startBtn: {
     flexDirection: "row",

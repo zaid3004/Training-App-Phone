@@ -39,7 +39,7 @@ export default function EditWorkout() {
     if (!id || !user?.id) return;
 
     try {
-      const row = await db.getFirstAsync("SELECT * FROM workouts WHERE id = ? AND user_id = ?", [id, user.id]);
+      const row = await db.getFirstAsync("SELECT * FROM workouts WHERE id = ? AND user_id = ?", [id, user.uid]);
       if (row) {
         setWorkoutName(row.name || "");
         setDescription(row.description || "");
@@ -83,7 +83,7 @@ export default function EditWorkout() {
       Alert.alert("Required", "Please select exercise for all entries");
       return;
     }
-    if (!user?.id) {
+    if (!user?.uid) {
       Alert.alert("Error", "User not loaded");
       return;
     }
@@ -99,7 +99,7 @@ export default function EditWorkout() {
       const exercisesJson = JSON.stringify(exercisesArray).replace(/'/g, "''");
 
       await db.execAsync(
-        `UPDATE workouts SET name = '${workoutName.replace(/'/g, "''")}', description = '${description.replace(/'/g, "''")}', exercises = '${exercisesJson}' WHERE id = '${id}' AND user_id = '${user.id}'`
+        `UPDATE workouts SET name = '${workoutName.replace(/'/g, "''")}', description = '${description.replace(/'/g, "''")}', exercises = '${exercisesJson}' WHERE id = '${id}' AND user_id = '${user.uid}'`
       );
 
       Alert.alert("Saved", "Workout updated successfully", [ { text: "OK", onPress: () => router.back() } ]);

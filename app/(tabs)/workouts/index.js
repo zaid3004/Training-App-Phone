@@ -7,6 +7,7 @@ import {
   FlatList,
   SafeAreaView,
   Alert,
+  ActivityIndicator,
 } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -28,16 +29,16 @@ export default function Workouts() {
   useFocusEffect(
     React.useCallback(() => {
       loadWorkouts();
-    }, [user?.id, db])
+    }, [user?.uid, db])
   );
 
   async function loadWorkouts() {
-    if (!user?.id) return;
+    if (!user?.uid) return;
 
     try {
       const rows = await db.getAllAsync(
         "SELECT * FROM workouts WHERE user_id = ? ORDER BY created_at DESC",
-        [user.id]
+        [user.uid]
       );
       setWorkouts(rows || []);
     } catch (e) {
@@ -147,13 +148,14 @@ export default function Workouts() {
           onPress={() => router.push("/workouts/create")}
           activeOpacity={0.8}
         >
-          <Ionicons name="add-outline" size={22} color={colors.text} />
-          <Text style={[styles.createText, { color: colors.text }]}>Create Workout</Text>
+          <Ionicons name="add-outline" size={22} color="#000000" />
+          <Text style={[styles.createText, { color: "#000000" }]}>Create Workout</Text>
         </TouchableOpacity>
 
         {loading ? (
           <View style={styles.centered}>
-            <Text style={[styles.placeholderText, { color: colors.muted }]}>
+            <ActivityIndicator size="large" color={colors.accent} />
+            <Text style={[styles.placeholderText, { color: colors.muted, marginTop: 7 }]}>
               Loading workouts...
             </Text>
           </View>
@@ -207,8 +209,9 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 18,
     borderRadius: 10,
-    flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
     gap: 10,
     marginBottom: 20,
   },
@@ -227,7 +230,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 1,
-    padding: 40,
+    padding: 32,
+    maxHeight: 565,
   },
   placeholderText: {
     fontSize: 15,
