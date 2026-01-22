@@ -54,7 +54,7 @@ export default function Settings() {
         const id = await AsyncStorage.getItem('@notif_schedule_id');
 
         setNotifEnabled(enabled === 'true');
-        setNotifTime(time || ''); // Default to HH:MM initially
+        setNotifTime(time || '20:00'); // Default to 20:00 initially
         if (id) setScheduleId(id);
       } catch (e) {
         console.log('Error loading notif settings:', e);
@@ -112,6 +112,7 @@ export default function Settings() {
         type: Notifications.SchedulableTriggerInputTypes.DAILY,
         hour,
         minute,
+        repeats: true,
       },
     });
 

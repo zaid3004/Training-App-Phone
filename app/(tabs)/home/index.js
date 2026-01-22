@@ -5,9 +5,7 @@ import { useRouter, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useAuth } from '../../../lib/auth/auth-context';
 import { useSQLite } from '../../../lib/sqlite-provider';
 import { useSettings } from '../../../lib/settings-context';
-import { getDoc, doc, serverTimestamp } from 'firebase/firestore';
-import { db as firestoreDb } from '../../../lib/firebase';
-import { setUserDocWithRetry } from '../../../lib/auth/auth-context';
+
 import { computePRsForUser } from '../../../lib/prs-utils';
 import { MOTIVATIONAL_QUOTES } from '../../../constants/motivationalQuotes';
 import Header from '../../../components/Header';
@@ -91,22 +89,7 @@ export default function Home() {
           return;
         }
 
-        // Check if Firestore doc exists; create if missing
-        console.time('firestore_check');
-        try {
-          const userDoc = await getDoc(doc(firestoreDb, 'users', user.uid));
-          if (!userDoc.exists()) {
-            await setUserDocWithRetry(firestoreDb, user.uid, {
-              email: user.email,
-              username: user.displayName || 'User',
-              createdAt: serverTimestamp(),
-              updatedAt: serverTimestamp(),
-            });
-          }
-        } catch (e) {
-          // Silent fail for Firestore issues
-        }
-        console.timeEnd('firestore_check');
+
 
         try {
           console.time('db_queries');
