@@ -6,7 +6,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
 import DateTimePicker from '@react-native-community/datetimepicker';
 
-import { useSQLite } from '../../../lib/sqlite-provider';
 import { useAuth } from '../../../lib/auth/auth-context';
 import { useSettings } from '../../../lib/settings-context';
 import { db } from '../../../lib/firebase';
@@ -16,7 +15,6 @@ import { Ionicons } from '@expo/vector-icons';
 
 export default function Settings() {
   const { user } = useAuth();
-  const db = useSQLite();
   const { colors, theme, accent, updateTheme, updateAccent, logout } = useSettings();
   const router = useRouter();
   const [username, setUsername] = useState('Loading...');
@@ -58,7 +56,7 @@ export default function Settings() {
         if (id) setScheduleId(id);
       } catch (e) {
         console.log('Error loading notif settings:', e);
-        setNotifTime('20:00'); // Fallback time if user settings fail to load or user forgets to set a 
+        setNotifTime('20:00'); // Fallback time if user settings fail to load or user forgets to set a
       }
     }
     loadNotifSettings();
@@ -169,9 +167,9 @@ export default function Settings() {
         body: quote,
         data: { type: 'test' },
       },
-      trigger: { 
+      trigger: {
         type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
-        seconds: 5 
+        seconds: 5
       },
     });
 
@@ -212,63 +210,64 @@ export default function Settings() {
             ))}
           </View>
        </View>
-       <View style={[styles.section, { borderColor: colors.border }]}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Your Account</Text>
-          <View style={{ marginBottom: 8, borderColor: colors.accent, borderWidth: 1, borderRadius: 6, padding: 8 }}>
-            <Text style={{ color: colors.text }}>Email: {user?.email || 'N/A'}</Text>
-          </View>
-          <View style={{ borderColor: colors.accent, borderWidth: 1, borderRadius: 6, padding: 8 }}>
-            <Text style={{ color: colors.text }}>Username: {user?.displayName || 'N/A'}</Text>
-          </View>
-        </View>
-
-        {/* Notifications */}
         <View style={[styles.section, { borderColor: colors.border }]}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Notifications</Text>
+           <Text style={[styles.sectionTitle, { color: colors.text }]}>Account</Text>
+           <TouchableOpacity
+             onPress={() => router.push('/settings/account-information')}
+             style={[styles.accountBtn, { borderColor: colors.accent }]}
+           >
+             <Text style={{ color: colors.text }}>Account Information</Text>
+             <Text style={{ color: colors.muted }}>View and edit your profile</Text>
+           </TouchableOpacity>
+         </View>
 
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-            <Text style={{ color: colors.text }}>Daily reminder</Text>
-            <TouchableOpacity
-              onPress={() => handleNotifToggle(!notifEnabled)}
-              style={[styles.toggle, notifEnabled && { backgroundColor: colors.accent }]}
-            >
-              <View style={[styles.toggleKnob, notifEnabled && { transform: [{ translateX: 20 }] }]} />
-            </TouchableOpacity>
-          </View>
+         {/* Notifications */}
+         <View style={[styles.section, { borderColor: colors.border }]}>
+           <Text style={[styles.sectionTitle, { color: colors.text }]}>Notifications</Text>
 
-          {notifEnabled && (
-            <>
-              <Text style={[styles.label, { color: colors.text }]}>Reminder time</Text>
-              <TouchableOpacity
-                style={[styles.input, { backgroundColor: colors.bg, borderColor: colors.accent, borderWidth: 1, borderRadius: 6, padding: 8, marginTop: 4, justifyContent: 'center' }]}
-                onPress={() => setShowTimePicker(true)}
-              >
-                <Text style={{ color: colors.text }}>{notifTime}</Text>
-              </TouchableOpacity>
+           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+             <Text style={{ color: colors.text }}>Daily reminder</Text>
+             <TouchableOpacity
+               onPress={() => handleNotifToggle(!notifEnabled)}
+               style={[styles.toggle, notifEnabled && { backgroundColor: colors.accent }]}
+             >
+               <View style={[styles.toggleKnob, notifEnabled && { transform: [{ translateX: 20 }] }]} />
+             </TouchableOpacity>
+           </View>
 
-              {showTimePicker && (
-                <DateTimePicker
-                  value={new Date(`1970-01-01T${notifTime}:00`)}
-                  mode="time"
-                  is24Hour={true}
-                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                  onChange={handleTimeChange}
-                />
-              )}
+           {notifEnabled && (
+             <>
+               <Text style={[styles.label, { color: colors.text }]}>Reminder time</Text>
+               <TouchableOpacity
+                 style={[styles.input, { backgroundColor: colors.bg, borderColor: colors.accent, borderWidth: 1, borderRadius: 6, padding: 8, marginTop: 4, justifyContent: 'center' }]}
+                 onPress={() => setShowTimePicker(true)}
+               >
+                 <Text style={{ color: colors.text }}>{notifTime}</Text>
+               </TouchableOpacity>
 
-              <Text style={{ color: colors.muted, fontSize: 12, marginTop: 4 }}>
-                Example: &apos;{MOTIVATIONAL_QUOTES[Math.floor(Math.random() * MOTIVATIONAL_QUOTES.length)]}&apos;
-              </Text>
+               {showTimePicker && (
+                 <DateTimePicker
+                   value={new Date(`1970-01-01T${notifTime}:00`)}
+                   mode="time"
+                   is24Hour={true}
+                   display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                   onChange={handleTimeChange}
+                 />
+               )}
 
-              <TouchableOpacity
-                onPress={sendTestNotification}
-                style={[styles.testBtn, { borderColor: colors.accent }]}
-              >
-                <Text style={{ color: colors.accent, fontWeight: '600' }}>Send Test Notification</Text>
-              </TouchableOpacity>
-            </>
-          )}
-        </View>
+               <Text style={{ color: colors.muted, fontSize: 12, marginTop: 4 }}>
+                 Example: '{MOTIVATIONAL_QUOTES[Math.floor(Math.random() * MOTIVATIONAL_QUOTES.length)]}'
+               </Text>
+
+               <TouchableOpacity
+                 onPress={sendTestNotification}
+                 style={[styles.testBtn, { borderColor: colors.accent }]}
+               >
+                 <Text style={{ color: colors.accent, fontWeight: '600' }}>Send Test Notification</Text>
+               </TouchableOpacity>
+             </>
+           )}
+         </View>
 
         {/* Feedback */}
        <View style={[styles.section, { borderColor: colors.border }]}>
@@ -305,6 +304,7 @@ const styles = StyleSheet.create({
   feedbackBtn: { padding: 10, borderRadius: 6, borderWidth: 1, marginBottom: 8 },
   toggle: { width: 44, height: 24, borderRadius: 12, backgroundColor: '#ccc', justifyContent: 'center' },
   toggleKnob: { width: 20, height: 20, borderRadius: 10, backgroundColor: '#fff', marginLeft: 2 },
+  accountBtn: { padding: 12, borderWidth: 1, borderRadius: 8, marginBottom: 8 },
   testBtn: { padding: 10, borderRadius: 6, borderWidth: 1, marginTop: 12, alignItems: 'center' },
   logoutBtn: { paddingVertical: 12, borderRadius: 8, alignItems: 'center', marginTop: 16, backgroundColor: '#ff4d4d' },
   logoutText: { color: '#000', fontWeight: '700', textAlign: 'center', justifyContent: 'center', alignItems: 'center' },

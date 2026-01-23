@@ -38,8 +38,8 @@ export default function Register() {
     try {
       console.log('Calling register');
       await register(email.trim(), username.trim(), password);
-      console.log('Register successful, navigating to home');
-      router.replace("/home");
+      console.log('Register successful, navigating to onboarding');
+      router.replace("/onboarding");
     } catch (error) {
       console.log('Register failed:', error);
       Alert.alert(
@@ -76,7 +76,7 @@ export default function Register() {
 
       <TextInput
         style={styles.input}
-        placeholder="Password"
+        placeholder="Password (min 8 char)"
         placeholderTextColor="#999"
         secureTextEntry
         value={password}

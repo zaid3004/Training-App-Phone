@@ -88,7 +88,7 @@ function MiniChart({ data, colors }) {
 }
 
 export default function Home() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, profileCompleted, profileLoading } = useAuth();
   const db = useSQLite();
   const { colors } = useSettings();
   const params = useLocalSearchParams();
@@ -114,6 +114,15 @@ export default function Home() {
       setRefreshKey(prev => prev + 1);
     }
   }, [params.refresh]);
+
+
+
+  // Profile gate: redirect to onboarding if not completed
+  useEffect(() => {
+    if (!profileLoading && !profileCompleted) {
+      router.replace('/onboarding');
+    }
+  }, [profileLoading, profileCompleted, router]);
 
   // Failsafe: prevent infinite loading after 4 seconds
   useEffect(() => {
@@ -228,6 +237,17 @@ export default function Home() {
   const currentWeight = last10?.[0]?.weight ? Number(last10[0].weight) : null;
   const change = computeChange(last10);
 
+  if (profileLoading) {
+    return (
+      <View style={[styles.page, { backgroundColor: colors.bg }]}>
+        <View style={styles.center}>
+          <ActivityIndicator size="large" color={colors.accent} />
+          <Text style={{ color: colors.text, marginTop: 7 }}>Setting up...</Text>
+        </View>
+      </View>
+    );
+  }
+
   if (pageLoading) {
     return (
       <View style={[styles.page, { backgroundColor: colors.bg }]}>
@@ -261,7 +281,7 @@ export default function Home() {
         </View>
 
         <View style={styles.cardRight}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>PR Summary (KG's)</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>PR Summary (KGs)</Text>
           <View style={styles.prRow}>
             <View style={styles.prCol}>
               <Text style={[styles.prLabel, { color: colors.accent }]}>Bench</Text>
