@@ -13,6 +13,45 @@ import Card from '../../../components/Card';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
+function formatDateShort(iso) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
+function computeChange(logs) {
+  const list = (logs || [])
+    .map(x => ({ ...x, weight: Number(x.weight) }))
+    .filter(x => Number.isFinite(x.weight));
+
+  if (list.length < 2) {
+    return { pct: null, direction: "none", text: "Not enough data yet" };
+  }
+
+  // logs are DESC (newest first)
+  const newest = list[0].weight;
+  const oldest = list[list.length - 1].weight;
+
+  if (!oldest || oldest === 0) {
+    return { pct: null, direction: "none", text: "Not enough data yet" };
+  }
+
+  const pct = ((newest - oldest) / oldest) * 100;
+  const abs = Math.abs(pct);
+
+  if (abs < 0.05) {
+    return { pct: 0, direction: "none", text: "No meaningful change" };
+  }
+
+  const direction = pct > 0 ? "up" : "down";
+  return {
+    pct,
+    direction,
+    text: `${direction === "up" ? "Up" : "Down"} ${abs.toFixed(1)}% in last ${list.length} logs`,
+  };
+}
+
 function ProgressRing({ value, colors }) {
   const pct = Math.max(0, Math.min(100, value));
   return (
@@ -76,6 +115,12 @@ export default function Home() {
     }
   }, [params.refresh]);
 
+  // Failsafe: prevent infinite loading after 4 seconds
+  useEffect(() => {
+    const t = setTimeout(() => setPageLoading(false), 4000);
+    return () => clearTimeout(t);
+  }, []);
+
   useFocusEffect(
     React.useCallback(() => {
       setRefreshKey(prev => prev + 1);
@@ -130,7 +175,10 @@ export default function Home() {
           setPr(prData);
 
           // Weight logs and workouts
-          setWeightLogs(logs || []);
+          const displayWeightLogs = (logs && logs.length > 0)
+            ? logs
+            : (stats?.bodyweight ? [{ ts: new Date().toISOString(), weight: stats.bodyweight }] : []);
+          setWeightLogs(displayWeightLogs);
           setRecentWorkouts(workouts || []);
 
             // Progress calculation
@@ -175,6 +223,10 @@ export default function Home() {
     title: w.name,
     date: w.completed_at,
   }));
+
+  const last10 = (weightLogs || []).slice(0, 10); // logs are already DESC
+  const currentWeight = last10?.[0]?.weight ? Number(last10[0].weight) : null;
+  const change = computeChange(last10);
 
   if (pageLoading) {
     return (
@@ -250,11 +302,86 @@ export default function Home() {
 
       {/* Bodyweight */}
       <Card style={{ marginVertical: 8 }}>
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>Bodyweight <Text style={{ color: colors.accent }}>(recent)</Text></Text>
-        <MiniChart data={weightLogs} colors={colors} />
-        <Text style={[styles.muted, { color: colors.muted }]}>
-          Last {Math.min(12, weightLogs.length)} entries
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>
+          Bodyweight <Text style={{ color: colors.accent }}>(recent)</Text>
         </Text>
+
+        {/* Current weight number */}
+        <View style={{ flexDirection: "row", alignItems: "baseline", gap: 8 }}>
+          <Text style={{ color: colors.text, fontSize: 28, fontWeight: "800" }}>
+            {currentWeight != null ? currentWeight.toFixed(1) : "--"}
+          </Text>
+          <Text style={{ color: colors.muted, fontSize: 14 }}>kg</Text>
+
+          {/* % change badge */}
+          {change.pct != null && (
+            <View
+              style={{
+                marginLeft: 10,
+                paddingHorizontal: 10,
+                paddingVertical: 4,
+                borderRadius: 999,
+                borderWidth: 1,
+                borderColor: colors.border,
+                backgroundColor: colors.bg,
+              }}
+            >
+              <Text
+                style={{
+                  color:
+                    change.direction === "up"
+                      ? "#FF6A6A"
+                      : change.direction === "down"
+                      ? "#2EF0BA"
+                      : colors.muted,
+                  fontWeight: "800",
+                  fontSize: 12,
+                }}
+              >
+                {change.direction === "up" ? "▲" : change.direction === "down" ? "▼" : "•"}{" "}
+                {Math.abs(change.pct).toFixed(1)}%
+              </Text>
+            </View>
+          )}
+        </View>
+
+        <Text style={[styles.muted, { color: colors.muted, marginTop: 6 }]}>
+          {change.text}
+        </Text>
+
+        {/* Chart */}
+        <MiniChart data={last10} colors={colors} />
+
+        <Text style={[styles.muted, { color: colors.muted }]}>
+          Last {Math.min(10, last10.length)} entries
+        </Text>
+
+        {/* Last 10 logs list */}
+        <View style={{ marginTop: 10 }}>
+          {last10.length === 0 ? (
+            <Text style={[styles.muted, { color: colors.muted }]}>No data</Text>
+          ) : (
+            last10.map((l, i) => (
+              <View
+                key={`${l.ts}-${i}`}
+                style={{
+                  flexDirection: "row",
+                  justifyContent: "space-between",
+                  paddingVertical: 6,
+                  borderBottomWidth: i === last10.length - 1 ? 0 : 1,
+                  borderBottomColor: colors.border,
+                }}
+              >
+                <Text style={{ color: colors.muted, fontSize: 12 }}>
+                  {formatDateShort(l.ts)}
+                </Text>
+                <Text style={{ color: colors.text, fontSize: 13, fontWeight: "700" }}>
+                  {Number(l.weight).toFixed(1)} kg
+                </Text>
+              </View>
+            ))
+          )}
+        </View>
       </Card>
 
       {/* Recent Activity */}

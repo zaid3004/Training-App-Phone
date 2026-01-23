@@ -53,6 +53,14 @@ export default function Profile() {
         `INSERT OR REPLACE INTO user_stats (user_id, name, bodyweight, bench, squat, deadlift) VALUES ('${user.uid.replace(/'/g, "''")}', '${name.replace(/'/g, "''")}', ${bodyweight || null}, ${prs.bench || null}, ${prs.squat || null}, ${prs.deadlift || null})`
       );
 
+      // Log current bodyweight to bodyweight_logs for chart
+      if (bodyweight) {
+        const ts = new Date().toISOString();
+        await db.execAsync(
+          `INSERT INTO bodyweight_logs (id, user_id, ts, weight) VALUES ('bw-${Date.now()}', '${user.uid}', '${ts}', ${Number(bodyweight)})`
+        );
+      }
+
       // Update user_prs for manual PRs
       const date = new Date().toISOString();
       if (prs.bench) {
