@@ -255,9 +255,9 @@ export default function Settings() {
                  />
                )}
 
-               <Text style={{ color: colors.muted, fontSize: 12, marginTop: 4 }}>
-                 Example: '{MOTIVATIONAL_QUOTES[Math.floor(Math.random() * MOTIVATIONAL_QUOTES.length)]}'
-               </Text>
+                <Text style={{ color: colors.muted, fontSize: 12, marginTop: 4 }}>
+                  Example: &apos;{MOTIVATIONAL_QUOTES[Math.floor(Math.random() * MOTIVATIONAL_QUOTES.length)]}&apos;
+                </Text>
 
                <TouchableOpacity
                  onPress={sendTestNotification}

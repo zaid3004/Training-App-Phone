@@ -2,6 +2,7 @@
 import { Stack } from "expo-router";
 import { SQLiteProvider } from "../lib/sqlite-provider";
 import { AuthProvider } from "../lib/auth/auth-context";
+import { ProfileProvider } from "../lib/profile/profile-context";
 import { SettingsProvider } from "../lib/settings-context";
 import * as Notifications from "expo-notifications";
 
@@ -19,9 +20,11 @@ export default function RootLayout() {
   return (
     <SQLiteProvider>
       <AuthProvider>
-        <SettingsProvider>
-          <Stack screenOptions={{ headerShown: false }} />
-        </SettingsProvider>
+        <ProfileProvider>
+          <SettingsProvider>
+            <Stack screenOptions={{ headerShown: false }} />
+          </SettingsProvider>
+        </ProfileProvider>
       </AuthProvider>
     </SQLiteProvider>
   );

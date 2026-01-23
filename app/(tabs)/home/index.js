@@ -3,6 +3,7 @@ import React, { use, useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Dimensions, FlatList, ActivityIndicator, InteractionManager } from 'react-native';
 import { useRouter, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useAuth } from '../../../lib/auth/auth-context';
+import { useProfile } from '../../../lib/profile/profile-context';
 import { useSQLite } from '../../../lib/sqlite-provider';
 import { useSettings } from '../../../lib/settings-context';
 
@@ -44,6 +45,9 @@ function computeChange(logs) {
     return { pct: 0, direction: "none", text: "No meaningful change" };
   }
 
+
+
+  
   const direction = pct > 0 ? "up" : "down";
   return {
     pct,
@@ -88,7 +92,9 @@ function MiniChart({ data, colors }) {
 }
 
 export default function Home() {
-  const { user, profileCompleted, profileLoading } = useAuth();
+  const { user } = useAuth();
+  const { profileLoading, profile } = useProfile();
+  const profileCompleted = profile?.profileCompleted === true;
   const db = useSQLite();
   const { colors } = useSettings();
   const params = useLocalSearchParams();

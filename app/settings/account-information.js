@@ -1,42 +1,19 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, SafeAreaView, Alert } from 'react-native';
+import React from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, SafeAreaView } from 'react-native';
 import { useRouter } from 'expo-router';
-import { doc, getDoc } from 'firebase/firestore';
 
 import { useAuth } from '../../lib/auth/auth-context';
+import { useProfile } from '../../lib/profile/profile-context';
 import { useSettings } from '../../lib/settings-context';
-import { db } from '../../lib/firebase';
 import Header from '../../components/Header';
 
 export default function AccountInformation() {
   const { user } = useAuth();
+  const { profile, profileLoading } = useProfile();
   const { colors } = useSettings();
   const router = useRouter();
 
-  const [profileData, setProfileData] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    loadProfileData();
-  }, [user?.uid]);
-
-  const loadProfileData = async () => {
-    if (!user?.uid) return;
-
-    try {
-      const userDoc = await getDoc(doc(db, 'users', user.uid));
-      if (userDoc.exists()) {
-        setProfileData(userDoc.data());
-      }
-    } catch (e) {
-      console.log('Error loading profile data:', e);
-      Alert.alert('Error', 'Failed to load profile data.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (loading) {
+  if (profileLoading) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]}>
         <Header title="Account Information" />
@@ -62,7 +39,7 @@ export default function AccountInformation() {
 
           <View style={[styles.infoRow, { borderColor: colors.border }]}>
             <Text style={[styles.label, { color: colors.text }]}>Username</Text>
-            <Text style={[styles.value, { color: colors.text }]}>{profileData?.username || 'N/A'}</Text>
+            <Text style={[styles.value, { color: colors.text }]}>{profile?.username || 'N/A'}</Text>
           </View>
         </View>
 
@@ -71,28 +48,30 @@ export default function AccountInformation() {
 
           <View style={[styles.infoRow, { borderColor: colors.border }]}>
             <Text style={[styles.label, { color: colors.text }]}>Age</Text>
-            <Text style={[styles.value, { color: colors.text }]}>{profileData?.age ? `${profileData.age} years` : 'Not set'}</Text>
+             <Text style={[styles.value, { color: colors.text }]}>{profile?.age ? `${profile.age} years` : 'Not set'}</Text>
           </View>
+
+
 
           <View style={[styles.infoRow, { borderColor: colors.border }]}>
             <Text style={[styles.label, { color: colors.text }]}>Height</Text>
-            <Text style={[styles.value, { color: colors.text }]}>{profileData?.heightCm ? `${profileData.heightCm} cm` : 'Not set'}</Text>
+            <Text style={[styles.value, { color: colors.text }]}>{profile?.heightCm ? `${profile.heightCm} cm` : 'Not set'}</Text>
           </View>
 
           <View style={[styles.infoRow, { borderColor: colors.border }]}>
             <Text style={[styles.label, { color: colors.text }]}>Current Weight</Text>
-            <Text style={[styles.value, { color: colors.text }]}>{profileData?.currentWeightKg ? `${profileData.currentWeightKg} kg` : 'Not set'}</Text>
+            <Text style={[styles.value, { color: colors.text }]}>{profile?.currentWeightKg ? `${profile.currentWeightKg} kg` : 'Not set'}</Text>
           </View>
 
           <View style={[styles.infoRow, { borderColor: colors.border }]}>
             <Text style={[styles.label, { color: colors.text }]}>Goal Type</Text>
-            <Text style={[styles.value, { color: colors.text }]}>{profileData?.goalType ? profileData.goalType.charAt(0).toUpperCase() + profileData.goalType.slice(1) : 'Not set'}</Text>
+            <Text style={[styles.value, { color: colors.text }]}>{profile?.goalType ? profile.goalType.charAt(0).toUpperCase() + profile.goalType.slice(1) : 'Not set'}</Text>
           </View>
 
-          {profileData?.goalType !== 'maintain' && (
+          {profile?.goalType !== 'maintain' && (
             <View style={[styles.infoRow, { borderColor: colors.border }]}>
               <Text style={[styles.label, { color: colors.text }]}>Target Weight</Text>
-              <Text style={[styles.value, { color: colors.text }]}>{profileData?.goalWeightKg ? `${profileData.goalWeightKg} kg` : 'Not set'}</Text>
+              <Text style={[styles.value, { color: colors.text }]}>{profile?.goalWeightKg ? `${profile.goalWeightKg} kg` : 'Not set'}</Text>
             </View>
           )}
         </View>
