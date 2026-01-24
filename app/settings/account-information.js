@@ -39,7 +39,7 @@ export default function AccountInformation() {
 
           <View style={[styles.infoRow, { borderColor: colors.border }]}>
             <Text style={[styles.label, { color: colors.text }]}>Username</Text>
-            <Text style={[styles.value, { color: colors.text }]}>{profile?.username || 'N/A'}</Text>
+            <Text style={[styles.value, { color: colors.text }]}>{user?.username || profile?.displayName || 'N/A'}</Text>
           </View>
         </View>
 
@@ -50,8 +50,6 @@ export default function AccountInformation() {
             <Text style={[styles.label, { color: colors.text }]}>Age</Text>
              <Text style={[styles.value, { color: colors.text }]}>{profile?.age ? `${profile.age} years` : 'Not set'}</Text>
           </View>
-
-
 
           <View style={[styles.infoRow, { borderColor: colors.border }]}>
             <Text style={[styles.label, { color: colors.text }]}>Height</Text>
