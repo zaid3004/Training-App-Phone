@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, Alert, Image } from 'react-native';
 import { useRouter } from 'expo-router';
+import { publishProfileUpdate } from '../../../lib/event-bus';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
 import { useSettings } from '../../../lib/settings-context';
@@ -71,6 +72,8 @@ export default function Profile() {
         );
       }
 
+      // Notify Home about the profile updates for instant refresh
+      publishProfileUpdate({ bodyweight, bench: prs.bench, squat: prs.squat, deadlift: prs.deadlift });
       Alert.alert('Profile Updated', 'Your profile has been successfully updated.', [
         { text: 'OK', onPress: () => router.push('/(tabs)/home?refresh=' + Date.now()) }
       ]);
@@ -90,6 +93,8 @@ export default function Profile() {
         await db.execAsync(
           `INSERT OR REPLACE INTO bodyweight_logs (id, user_id, ts, weight) VALUES ('${Date.now()}', '${user.uid}', '${today}', ${stats.bodyweight})`
         );
+        // Also publish update so Home can reflect instantly
+        publishProfileUpdate({ bodyweight: stats.bodyweight });
         Alert.alert('Logged', 'Bodyweight logged for today');
       } else {
         Alert.alert('No bodyweight', 'Set your bodyweight first');

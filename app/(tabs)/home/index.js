@@ -9,6 +9,7 @@ import { getDoc, doc, serverTimestamp } from 'firebase/firestore';
 import { db as firestoreDb } from '../../../lib/firebase';
 import { setUserDocWithRetry } from '../../../lib/auth/auth-context';
 import { computePRsForUser } from '../../../lib/prs-utils';
+import { subscribeProfileUpdate } from '../../../lib/event-bus';
 import { MOTIVATIONAL_QUOTES } from '../../../constants/motivationalQuotes';
 import Header from '../../../components/Header';
 import Card from '../../../components/Card';
@@ -50,6 +51,27 @@ function MiniChart({ data, colors }) {
   );
 }
 
+// Lightweight bar chart for last weight entries (last 10)
+function WeightBarChart({ data, colors }) {
+  if (!data || data.length === 0) {
+    return <Text style={[styles.muted, { color: colors.muted }]}>No data</Text>;
+  }
+  const weights = data.map((d) => Number(d.weight) || 0);
+  const max = Math.max(...weights, 1);
+  return (
+    <View style={styles.weightBarRow}>
+      {weights.map((w, idx) => {
+        const h = Math.max(6, Math.round((w / max) * 60));
+        return (
+          <View key={idx} style={styles.weightBarCol}>
+            <View style={[styles.weightBar, { height: h, backgroundColor: colors.accent }]} />
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
 export default function Home() {
   const { user, loading: authLoading } = useAuth();
   const db = useSQLite();
@@ -57,6 +79,7 @@ export default function Home() {
   const params = useLocalSearchParams();
   const router = useRouter();
   const [displayName, setDisplayName] = useState(user?.displayName || 'Athlete');
+  const [bodyweight, setBodyweight] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [pageLoading, setPageLoading] = useState(true);
   const [pr, setPr] = useState({ bench: '-', squat: '-', deadlift: '-' });
@@ -64,11 +87,31 @@ export default function Home() {
   const [recentWorkouts, setRecentWorkouts] = useState([]);
   const [dailyProgress, setDailyProgress] = useState(0);
   const [motivationalQuote, setMotivationalQuote] = useState('');
+  // Local bodyweight display value (latest from profile updates)
+  // Reuse existing bodyweight state when available
 
   // Set random motivational quote on mount
   useEffect(() => {
     const randomQuote = MOTIVATIONAL_QUOTES[Math.floor(Math.random() * MOTIVATIONAL_QUOTES.length)];
     setMotivationalQuote(randomQuote);
+  }, []);
+
+  // Listen for profile updates to reflect changes instantly on Home
+  useEffect(() => {
+    const unsubscribe = subscribeProfileUpdate((update) => {
+      if (!update) return;
+      if (update.bodyweight !== undefined) {
+        setBodyweight(update.bodyweight);
+      }
+      if (update.bench !== undefined || update.squat !== undefined || update.deadlift !== undefined) {
+        setPr((p) => ({
+          bench: update.bench ?? p.bench,
+          squat: update.squat ?? p.squat,
+          deadlift: update.deadlift ?? p.deadlift,
+        }));
+      }
+    });
+    return unsubscribe;
   }, []);
 
   // Force reload when navigated with refresh param (e.g., from profile save)
@@ -91,26 +134,30 @@ export default function Home() {
           return;
         }
 
-        // Check if Firestore doc exists; create if missing
-        console.time('firestore_check');
-        try {
-          const userDoc = await getDoc(doc(firestoreDb, 'users', user.uid));
-          if (!userDoc.exists()) {
-            await setUserDocWithRetry(firestoreDb, user.uid, {
-              email: user.email,
-              username: user.displayName || 'User',
-              createdAt: serverTimestamp(),
-              updatedAt: serverTimestamp(),
-            });
+        // Firestore user doc check moved into parallel flow below
+        const firestoreCheckP = (async () => {
+          console.time('firestore_check');
+          try {
+            const userDoc = await getDoc(doc(firestoreDb, 'users', user.uid));
+            if (!userDoc.exists()) {
+              await setUserDocWithRetry(firestoreDb, user.uid, {
+                email: user.email,
+                username: user.displayName || 'User',
+                createdAt: serverTimestamp(),
+                updatedAt: serverTimestamp(),
+              });
+            }
+          } catch (e) {
+            // Silent fail for Firestore issues
           }
-        } catch (e) {
-          // Silent fail for Firestore issues
-        }
-        console.timeEnd('firestore_check');
+          console.timeEnd('firestore_check');
+        })();
 
         try {
           console.time('db_queries');
-          const [stats, prs, logs, workouts] = await Promise.all([
+          // Run in parallel and gracefully handle potential failures
+          const results = await Promise.allSettled([
+            firestoreCheckP,
             db.getFirstAsync('SELECT name, bench, squat, deadlift, bodyweight FROM user_stats WHERE user_id = ?', [user.uid]),
             computePRsForUser(db, user.uid),
             db.getAllAsync('SELECT ts, weight FROM bodyweight_logs WHERE user_id = ? ORDER BY ts DESC LIMIT 12', [user.uid]),
@@ -123,14 +170,21 @@ export default function Home() {
               LIMIT 3
              `, [user.uid])
           ]);
+
+          const stats = results[1].status === 'fulfilled' ? results[1].value : null;
+          const prs = results[2].status === 'fulfilled' ? results[2].value : [];
+          const logs = results[3].status === 'fulfilled' ? results[3].value : [];
+          const workouts = results[4].status === 'fulfilled' ? results[4].value : [];
           console.timeEnd('db_queries');
 
 
 
           if (mounted) {
-          // Display name
-          const newDisplayName = stats?.name || user?.displayName || 'Athlete';
-          setDisplayName(newDisplayName);
+            // Display name
+            const newDisplayName = stats?.name || user?.displayName || 'Athlete';
+            setDisplayName(newDisplayName);
+            // Bodyweight for Home display (prefer DB value; fall back to null)
+            setBodyweight(stats?.bodyweight ?? null);
 
             // PRs
             let manualPrData = {};
@@ -144,11 +198,12 @@ export default function Home() {
               else if (p.exercise.toLowerCase().includes('squat') && !prData.squat) prData.squat = p.max_weight;
               else if (p.exercise.toLowerCase().includes('deadlift') && !prData.deadlift) prData.deadlift = p.max_weight;
             });
-          setPr(prData);
+            setPr(prData);
 
           // Weight logs and workouts
           setWeightLogs(logs || []);
           setRecentWorkouts(workouts || []);
+
 
             // Progress calculation
             let progress = 0;
@@ -209,10 +264,10 @@ export default function Home() {
     <View style={{ padding: 16 }}>
       {/* Greeting */}
       <View style={styles.greetingRow}>
-        <Text style={[styles.greeting, { color: colors.text }]}>
+        <Text style={[styles.greeting, { color: colors.text }]}> 
           Welcome back, <Text style={{ color: colors.accent }}>{displayName}</Text>
         </Text>
-        <Text style={[styles.sub, { color: colors.muted }]}>Track your progress. Stay consistent.</Text>
+        {/* Greeting subtitle removed per design request; bodyweight display moved to bodyweight graph */}
       </View>
 
       {/* Progress Row */}
@@ -267,11 +322,9 @@ export default function Home() {
 
       {/* Bodyweight */}
       <Card style={{ marginVertical: 8 }}>
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>Bodyweight <Text style={{ color: colors.accent }}>(recent)</Text></Text>
-        <MiniChart data={weightLogs} colors={colors} />
-        <Text style={[styles.muted, { color: colors.muted }]}>
-          Last {Math.min(12, weightLogs.length)} entries
-        </Text>
+      <Text style={[styles.sectionTitle, { color: colors.text }]}>Bodyweight <Text style={{ color: colors.accent }}>(recent)</Text></Text>
+      <WeightBarChart data={weightLogs.slice(-10)} colors={colors} />
+      <Text style={[styles.muted, { color: colors.muted }]}>Last {Math.min(10, weightLogs.length)} entries</Text>
       </Card>
 
       {/* Recent Activity */}
@@ -342,6 +395,24 @@ const styles = StyleSheet.create({
   miniBarCol: { flex: 1, alignItems: 'center', justifyContent: 'flex-end' },
   miniBar: { width: 6, borderRadius: 3, marginHorizontal: 1 },
   muted: { color: '#666' },
+  weightBarRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    height: 70,
+    paddingHorizontal: 6,
+  },
+  weightBarCol: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  weightBar: {
+    width: 8,
+    borderRadius: 4,
+  },
+  bodyweight: {
+    fontSize: 14,
+    marginTop: 6,
+  },
   recentRow: { paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.1)' },
   recentTitle: { fontSize: 13 },
   recentDate: { fontSize: 11, marginTop: 2 },
