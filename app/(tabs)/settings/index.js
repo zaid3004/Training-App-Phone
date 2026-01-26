@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Linking, Alert, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Linking, Alert, Platform, Modal } from 'react-native';
 import { useRouter } from 'expo-router';
 import { doc, getDoc } from 'firebase/firestore';
+import { TextInput } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -15,9 +16,9 @@ import Header from '../../../components/Header';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function Settings() {
-  const { user } = useAuth();
+  const { user, deleteAccount, logout } = useAuth();
   const db = useSQLite();
-  const { colors, theme, accent, updateTheme, updateAccent, logout } = useSettings();
+  const { colors, theme, accent, updateTheme, updateAccent } = useSettings();
   const router = useRouter();
   const [username, setUsername] = useState('Loading...');
 
@@ -71,6 +72,26 @@ export default function Settings() {
       await logout();
     }
     router.replace('/auth/login');
+  }
+
+  // Delete Account flow (UI and wiring)
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deletePassword, setDeletePassword] = useState('');
+  const [deleting, setDeleting] = useState(false);
+
+  async function confirmDeleteAccount() {
+    try {
+      setDeleting(true);
+      await deleteAccount(deletePassword, db);
+      // If success, navigate to login after account wipe; assume user is signed out by Firebase
+      router.replace('/auth/login');
+    } catch (e) {
+      Alert.alert('Delete failed', e?.message || 'Please try again.');
+    } finally {
+      setDeleting(false);
+      setShowDeleteModal(false);
+      setDeletePassword('');
+    }
   }
 
   // Notification functions
@@ -178,7 +199,9 @@ export default function Settings() {
   }
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor: colors.bg }]} contentContainerStyle={styles.content}>
+    <View style={{ flex: 1, backgroundColor: colors.bg }}>
+      <Header />
+      <ScrollView style={[styles.container, { backgroundColor: colors.bg }]} contentContainerStyle={styles.content}>
 
       {/* Theme */}
       <View style={[styles.section, { borderColor: colors.border }]}>
@@ -289,7 +312,8 @@ export default function Settings() {
        <TouchableOpacity style={[styles.logoutBtn, { borderColor: '#000', backgroundColor: colors.accent }]} onPress={handleLogout}>
          <Text style={[styles.logoutText]}>Logout</Text>
        </TouchableOpacity>
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
 
@@ -305,6 +329,19 @@ const styles = StyleSheet.create({
   toggle: { width: 44, height: 24, borderRadius: 12, backgroundColor: '#ccc', justifyContent: 'center' },
   toggleKnob: { width: 20, height: 20, borderRadius: 10, backgroundColor: '#fff', marginLeft: 2 },
   testBtn: { padding: 10, borderRadius: 6, borderWidth: 1, marginTop: 12, alignItems: 'center' },
-  logoutBtn: { paddingVertical: 12, borderRadius: 8, alignItems: 'center', marginTop: 16, backgroundColor: '#ff4d4d' },
+  logoutBtn: { paddingVertical: 12, borderRadius: 8, alignItems: 'center', marginTop: 16, backgroundColor: '#ff4d4d', marginBottom: 20 },
   logoutText: { color: '#000', fontWeight: '700', textAlign: 'center', justifyContent: 'center', alignItems: 'center' },
+  deleteAccountBtn: { paddingVertical: 12, paddingHorizontal: 14, borderRadius: 6, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
+  modalOverlay: {
+    position: 'absolute', left: 0, right: 0, top: 0, bottom: 0,
+    justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)'
+  },
+  modalContent: {
+    width: '90%', backgroundColor: '#fff', borderRadius: 8, padding: 16, shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 6, elevation: 5
+  },
+  modalTitle: { fontSize: 18, fontWeight: '700', marginBottom: 8 },
+  modalSubtitle: { fontSize: 14, marginBottom: 8 },
+  modalInput: { borderWidth: 1, borderColor: '#ccc', borderRadius: 6, paddingHorizontal: 10, height: 40, marginBottom: 12 },
+  modalActions: { flexDirection: 'row', justifyContent: 'flex-end' },
+  modalBtn: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 6, marginLeft: 8, backgroundColor: '#eee' }
 });

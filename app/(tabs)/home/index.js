@@ -1,13 +1,10 @@
 //home/index.js 
-import React, { use, useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Dimensions, FlatList, ActivityIndicator, InteractionManager } from 'react-native';
 import { useRouter, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useAuth } from '../../../lib/auth/auth-context';
 import { useSQLite } from '../../../lib/sqlite-provider';
 import { useSettings } from '../../../lib/settings-context';
-import { getDoc, doc, serverTimestamp } from 'firebase/firestore';
-import { db as firestoreDb } from '../../../lib/firebase';
-import { setUserDocWithRetry } from '../../../lib/auth/auth-context';
 import { computePRsForUser } from '../../../lib/prs-utils';
 import { subscribeProfileUpdate } from '../../../lib/event-bus';
 import { MOTIVATIONAL_QUOTES } from '../../../constants/motivationalQuotes';
@@ -30,26 +27,7 @@ function ProgressRing({ value, colors }) {
   );
 }
 
-function MiniChart({ data, colors }) {
-  if (!data || data.length === 0) {
-    return <Text style={[styles.muted, { color: colors.muted }]}>No data</Text>;
-  }
-  const weights = data.map((d) => Number(d.weight) || 0);
-  const max = Math.max(...weights, 1);
-  const bars = weights.slice(-12); // Last 12 entries
-  return (
-    <View style={styles.miniChartWrap}>
-      {bars.map((w, i) => {
-        const h = Math.max(4, Math.round((w / max) * 60));
-        return (
-          <View key={i} style={styles.miniBarCol}>
-            <View style={[styles.miniBar, { height: h, backgroundColor: colors.accent }]} />
-          </View>
-        );
-      })}
-    </View>
-  );
-}
+// MiniChart removed; using WeightBarChart for weight data
 
 // Lightweight bar chart for last weight entries (last 10)
 function WeightBarChart({ data, colors }) {
@@ -73,7 +51,7 @@ function WeightBarChart({ data, colors }) {
 }
 
 export default function Home() {
-  const { user, loading: authLoading } = useAuth();
+  const { user } = useAuth();
   const db = useSQLite();
   const { colors } = useSettings();
   const params = useLocalSearchParams();
@@ -134,30 +112,11 @@ export default function Home() {
           return;
         }
 
-        // Firestore user doc check moved into parallel flow below
-        const firestoreCheckP = (async () => {
-          console.time('firestore_check');
-          try {
-            const userDoc = await getDoc(doc(firestoreDb, 'users', user.uid));
-            if (!userDoc.exists()) {
-              await setUserDocWithRetry(firestoreDb, user.uid, {
-                email: user.email,
-                username: user.displayName || 'User',
-                createdAt: serverTimestamp(),
-                updatedAt: serverTimestamp(),
-              });
-            }
-          } catch (e) {
-            // Silent fail for Firestore issues
-          }
-          console.timeEnd('firestore_check');
-        })();
-
+        // Firestore gating removed; rely on SQLite only
         try {
           console.time('db_queries');
-          // Run in parallel and gracefully handle potential failures
+          // Run in parallel (no Firestore reads here)
           const results = await Promise.allSettled([
-            firestoreCheckP,
             db.getFirstAsync('SELECT name, bench, squat, deadlift, bodyweight FROM user_stats WHERE user_id = ?', [user.uid]),
             computePRsForUser(db, user.uid),
             db.getAllAsync('SELECT ts, weight FROM bodyweight_logs WHERE user_id = ? ORDER BY ts DESC LIMIT 12', [user.uid]),
@@ -171,10 +130,11 @@ export default function Home() {
              `, [user.uid])
           ]);
 
-          const stats = results[1].status === 'fulfilled' ? results[1].value : null;
-          const prs = results[2].status === 'fulfilled' ? results[2].value : [];
-          const logs = results[3].status === 'fulfilled' ? results[3].value : [];
-          const workouts = results[4].status === 'fulfilled' ? results[4].value : [];
+          const stats = results[0].status === 'fulfilled' ? results[0].value : null;
+          const prs = results[1].status === 'fulfilled' ? results[1].value : [];
+          const logs = results[2].status === 'fulfilled' ? results[2].value : [];
+          const workouts = results[3].status === 'fulfilled' ? results[3].value : [];
+          // No Firestore weight; rely on logs or stats for weight display
           console.timeEnd('db_queries');
 
 
@@ -183,8 +143,10 @@ export default function Home() {
             // Display name
             const newDisplayName = stats?.name || user?.displayName || 'Athlete';
             setDisplayName(newDisplayName);
-            // Bodyweight for Home display (prefer DB value; fall back to null)
-            setBodyweight(stats?.bodyweight ?? null);
+            // Bodyweight from the latest log if available; otherwise null
+            const latestLogWeight = logs?.[0]?.weight != null ? Number(logs[0].weight) : null;
+            const displayWeight = latestLogWeight;
+            setBodyweight(displayWeight);
 
             // PRs
             let manualPrData = {};
@@ -200,9 +162,9 @@ export default function Home() {
             });
             setPr(prData);
 
-          // Weight logs and workouts
-          setWeightLogs(logs || []);
-          setRecentWorkouts(workouts || []);
+            // Weight logs and workouts
+            setWeightLogs(logs || []);
+            setRecentWorkouts(workouts || []);
 
 
             // Progress calculation
@@ -323,7 +285,10 @@ export default function Home() {
       {/* Bodyweight */}
       <Card style={{ marginVertical: 8 }}>
       <Text style={[styles.sectionTitle, { color: colors.text }]}>Bodyweight <Text style={{ color: colors.accent }}>(recent)</Text></Text>
-      <WeightBarChart data={weightLogs.slice(-10)} colors={colors} />
+      {typeof bodyweight === 'number' && bodyweight !== null && (
+        <Text style={[styles.bodyweight, { color: colors.muted }]}>Latest: {bodyweight} kg</Text>
+      )}
+      <WeightBarChart data={weightLogs.slice(0, 10).reverse()} colors={colors} />
       <Text style={[styles.muted, { color: colors.muted }]}>Last {Math.min(10, weightLogs.length)} entries</Text>
       </Card>
 
