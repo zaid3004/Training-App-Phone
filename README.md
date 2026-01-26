@@ -19,12 +19,6 @@ The app allows users to track workouts, bodyweight, and progress over time while
 ### 👤 Account & Profile
 
 * User profile stored **server-side** in Firebase Firestore
-* Profile data includes:
-
-  * Age
-  * Height
-  * Current bodyweight
-  * Goal type (cut / bulk / maintain)
 * Account information visible under Settings
 * Secure password change using Firebase re-authentication
 
